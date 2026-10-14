@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget test page</title>
+<style>
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1a333c; background: #f6f8fa; }
+  header { display: flex; gap: 24px; align-items: center; padding: 18px 32px; background: #fff; border-bottom: 1px solid #e3e8ec; }
+  header strong { font-size: 18px; margin-right: auto; }
+  header span { color: #5b6b73; font-size: 14px; }
+  main { max-width: 880px; margin: 0 auto; padding: 72px 24px; }
+  h1 { font-size: 40px; line-height: 1.15; margin: 0 0 12px; letter-spacing: -0.02em; }
+  p { color: #5b6b73; max-width: 560px; }
+  .note { margin-top: 40px; padding: 16px 18px; border-radius: 12px; background: #fff; border: 1px dashed #c9d4da; font-size: 14px; }
+</style>
+</head>
+<body>
+<header><strong id="brand">Your Agency</strong><span>Holidays</span><span>Honeymoons</span><span>Visa</span><span>Forex</span></header>
+<main>
+  <h1>A blank page with your widget on it</h1>
+  <p>This page loads the same one-line script your website will use. Open the planner in the corner and plan a trip.</p>
+  <p class="note" id="lead-note">When a traveller asks for a quote, the script fires a <code>trip-lead</code> event your site can listen to.</p>
+</main>
+<script>
+  (function () {
+    var params = new URLSearchParams(location.search);
+    var name = params.get("name") || "Your Agency";
+    document.getElementById("brand").textContent = name;
+    var tag = document.createElement("script");
+    tag.src = "/widget.js";
+    tag.async = true;
+    tag.dataset.name = name;
+    tag.dataset.color = params.get("color") || "#2c70f6";
+    if (params.get("label")) tag.dataset.label = params.get("label");
+    if (params.get("greeting")) tag.dataset.greeting = params.get("greeting");
+    if (params.get("position")) tag.dataset.position = params.get("position");
+    tag.dataset.open = "true";
+    tag.addEventListener("trip-lead", function (event) {
+      document.getElementById("lead-note").textContent = "New lead " + event.detail.lead + " sent to the quote desk.";
+    });
+    document.body.appendChild(tag);
+  })();
+</script>
+</body>
+</html>
