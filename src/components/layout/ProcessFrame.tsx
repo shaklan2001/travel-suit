@@ -22,6 +22,11 @@ export function ProcessFrame({ processModule, children }: ProcessFrameProps) {
         <SuiteNavLink href={`${basePath}/squad`}>Agentic Squad</SuiteNavLink>
         <SuiteNavLink href={`${basePath}/map`}>Process Map</SuiteNavLink>
         <SuiteNavLink href={`${basePath}/queue`}>{processModule.workspaceLabel ?? "Queue"}</SuiteNavLink>
+        {processModule.extraTabs?.map((tab) => (
+          <SuiteNavLink key={tab.slug} href={`${basePath}/${tab.slug}`}>
+            {tab.label}
+          </SuiteNavLink>
+        ))}
       </nav>
       {children}
     </main>

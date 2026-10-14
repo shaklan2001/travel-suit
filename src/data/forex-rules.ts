@@ -1,5 +1,5 @@
 /**
- * Confirmed TCIL forex script rules. TCIL will change thresholds, so they stay in this config.
+ * Confirmed forex script rules. Thresholds can change thresholds, so they stay in this config.
  * Live card, cash, and remittance rates are intentionally absent.
  */
 export const FOREX_RULES = {

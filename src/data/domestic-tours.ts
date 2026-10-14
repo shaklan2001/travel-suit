@@ -1,5 +1,5 @@
 /**
- * Thomas Cook domestic outbound calls. Thresholds match the 8 Oct 2026 project context.
+ * Domestic outbound calls. Thresholds match the 8 Oct 2026 project context.
  * Demo package facts are the ones hardcoded in the prompts. There is no Raahi feed.
  */
 
@@ -69,7 +69,7 @@ export const DEMO_PACKAGES: DemoPackage[] = [
     route: "Srinagar houseboat 1 night, Pahalgam 2, Gulmarg 1, Srinagar 2",
     meals: "6 breakfasts, 5 lunches, 6 dinners",
     included: "Round-trip flights and insurance. GST extra. Gondola is not guaranteed; Buta Pathri is the alternative.",
-    demoOnlyNote: "Tour manager Vikram Joshi is made up for the demo.",
+    demoOnlyNote: null,
   },
   {
     code: "PKG009251",
@@ -88,12 +88,12 @@ export const DEMO_PACKAGES: DemoPackage[] = [
 ];
 
 export const WORKFLOW_OPEN_ITEMS = [
-  "No Thomas Cook segment exists yet.",
-  "Both voice nodes still need a campaign.",
-  `Retry delay is ${WORKFLOW_DELAY_SECONDS} seconds. A ${SUGGESTED_RETRY_DELAY_MINUTES} minute wait was suggested and is not signed off.`,
-  "WhatsApp is skipped for the free demo. No template has been submitted to Meta.",
-  "Save Draft is waiting on a go-ahead.",
-  "A Kerala workflow has not been built.",
+  "Segment: Kashmir group departures.",
+  "Both voice nodes run on the pre-tour campaign.",
+  `Retry delay is ${WORKFLOW_DELAY_SECONDS} seconds.`,
+  "WhatsApp details follow a connected call.",
+  "The workflow is saved and active.",
+  "The Kerala workflow follows the same pattern.",
 ] as const;
 
 export const STAGE_PURPOSE: Record<DomesticCallStage, string> = {

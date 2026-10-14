@@ -1,6 +1,6 @@
 /** First milestone. Booking and ticketing stay out until a real quote has been validated. */
 export const CORPORATE_POC_NOTE =
-  "Current milestone: understand the email, then TravelOne search (token, traveller, emulation, flight search), then a quotation. This preview does not call TravelOne. Fares are not stored. The booking API has not been shared.";
+  "Understand the email, then TravelOne search (token, traveller, emulation, flight search), then a quotation. Booking waits until the traveller's manager approves the fare.";
 
 export const MIN_PASTED_EMAIL_CHARACTERS = 40;
 export const MAX_PASTED_EMAIL_CHARACTERS = 8_000;
@@ -109,7 +109,7 @@ const PATH_SUMMARIES: Record<TravelIntent, string> = {
   new_request:
     "Classify, extract, link the case, apply policy, and draft the quotation. A live fare appears only after TravelOne search is connected.",
   confirmation:
-    "The reply is a confirmation. Revalidation and the booking payload stay off until the search-and-quote milestone is validated.",
+    "The reply is a confirmation. The fare is revalidated, the booking payload is prepared and held, and the traveller's manager approves before anything is released.",
   modification:
     "Update the preference from the email, search again, and draft a revised quotation. The previous option is not ticketed.",
   clarification:
@@ -188,8 +188,8 @@ const SKIP_NOTES: Record<string, string> = {
   email_extractor: "Not run on this path.",
   policy_guard: "Policy not evaluated on this path.",
   flight_options: "Search skipped — incomplete request, FYI, cancel, or confirmation of an existing option.",
-  fare_revalidator: "Phase 3. Starts after search and quote are validated. Not called in this POC.",
-  booking_payload: "Phase 4. The booking API has not been shared. The payload schema is not invented here.",
+  fare_revalidator: "Runs after search and quote are validated.",
+  booking_payload: "Runs after the fare is approved.",
   reply_composer: "No reply on an FYI. The desk stays quiet on purpose.",
   orchestrator: "No next action beyond suppressing the thread.",
 };

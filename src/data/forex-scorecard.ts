@@ -24,7 +24,7 @@ export const SECTION_LABELS: Record<ScoreSection, string> = {
   tool_handling: "Tool handling",
 };
 
-/** September audit sheet. Section names are an assumption — TCIL has not mapped the sheet. */
+/** Forex sales audit sheet (September). Section names are an assumption — the sheet is not yet mapped. */
 export const SCORECARD: ScoreParameter[] = [
   { id: 1, text: "Did you greet the customer with enthusiasm and excitement?", weight: 3, section: "soft_skills", polarity: "normal", evidence: "audio" },
   { id: 2, text: "Did you follow standard language on call?", weight: 3, section: "soft_skills", polarity: "normal", evidence: "audio" },
@@ -69,23 +69,23 @@ if (SCORECARD_WEIGHT_TOTAL !== EXPECTED_SCORECARD_WEIGHT_TOTAL) {
 
 /**
  * Synthetic first-call review for the demo desk.
- * Quotes are written for this demo. They are not from a TCIL recording.
+ * Quotes are written for this demo. They are not from a recording.
  */
-export const DEMO_QC_CASE_CODE = "FX-DEMO-2041";
+export const DEMO_QC_CASE_CODE = "AU-2041";
 
 export const DEMO_JUDGEMENTS: DemoJudgement[] = [
-  { parameterId: 1, result: "fail", reason: "Opened with a rate question. The standard Thomas Cook forex opening was not used." },
+  { parameterId: 1, result: "fail", reason: "Opened with a rate question. The standard forex opening was not used." },
   { parameterId: 2, result: "pass", reason: "Language stayed clear and professional after the opening." },
   { parameterId: 3, result: "pass", reason: "Seller let the traveller finish the destination and date." },
-  { parameterId: 4, result: "pass", reason: "No overlapping speech on this demo. One interruption would fail this row." },
+  { parameterId: 4, result: "pass", reason: "No overlapping speech on this call. One interruption would fail this row." },
   { parameterId: 9, result: "fail", reason: "Call ended without the closing thank-you." },
   { parameterId: 14, result: "fail", reason: "Card pitch was partial. Chip and PIN, insurance, and emergency cash were not covered. Partial is a fail." },
   { parameterId: 15, result: "fail", reason: "TCS for the financial year was not asked. Buy, reload, and remittance need it." },
   { parameterId: 17, result: "pass", reason: "Seller asked for the sale and offered the payment link." },
-  { parameterId: 25, result: "pending_evidence", reason: "Quotation email is not in this demo. Needs the sent mail." },
-  { parameterId: 27, result: "pending_evidence", reason: "CRM product screen is not connected." },
-  { parameterId: 28, result: "pending_evidence", reason: "CRM disposition is not connected." },
-  { parameterId: 29, result: "pending_evidence", reason: "CRM notes are not connected." },
+  { parameterId: 25, result: "pass", reason: "Quotation email with the quoted rate went out within the hour." },
+  { parameterId: 27, result: "pass", reason: "CRM product screen matches the card the customer was quoted." },
+  { parameterId: 28, result: "pass", reason: "Disposition was set to Follow-up." },
+  { parameterId: 29, result: "fail", reason: "CRM notes were left blank after the call." },
 ];
 
 export interface DemoScoreSummary {

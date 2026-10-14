@@ -15,7 +15,7 @@ Client on the demo thread: Acme Corp India. Traveller: Ananya Mehta. Desk addres
 | # | Intent | What the thread shows | What must not happen |
 |---|---|---|---|
 | 1 | `new_request` | Flight booking request, Ananya Mehta, 12 Oct, DEL–BOM, economy, evening around 7 PM, 1 passenger, cost centre CC-4821 | No revalidation and no booking until she confirms |
-| 2 | `confirmation` | She accepts the 7 PM IndiGo option, around 19:05 | Fare and seats are revalidated, then a ticketing payload is built. Ticketing still happens on TravelOne |
+| 2 | `confirmation` | She accepts the 7 PM IndiGo option, around 19:05 | Fare and seats are revalidated and the payload is prepared and held. Her reporting manager approves the exact fare before anything is released. Ticketing still happens on TravelOne |
 | 3 | `modification` | She wants a cheaper morning option, IndiGo if possible. Same route and date | A revised quotation. The old option is not ticketed |
 | 4 | `clarification` | EA Rahul asks for Bangalore–Hyderabad for Vikram Sharma, economy, 1 passenger. No date | No search. The desk asks for the missing date |
 | 5 | `fyi_internal` | Rahul tells sales leadership Ananya will be in Mumbai. Travel desk is only on cc. "No booking action needed" | No auto-reply and no booking |
@@ -37,10 +37,19 @@ Client on the demo thread: Acme Corp India. Traveller: Ananya Mehta. Desk addres
 
 Green means the agent ran. A grey skip is correct for that path, not a failure.
 
+## Manager approval
+
+Corporate travel is not ticketed on the traveller's word alone. After the traveller confirms, the fleet revalidates the fare and prepares the booking payload, then stops. The reporting manager approves the exact fare, flight and cost centre. Only then is the payload released to TravelOne.
+
+- In the inbox this is the **Awaiting manager** state. The desk sends the traveller a "sent for approval" note on its own.
+- Approve moves the case to a counsellor for ticketing on TravelOne. Reject closes it. Nothing is ticketed on either path from this suite.
+- The manager is a role on the client profile. The approver's address and any fare threshold are client configuration. They are not invented here.
+- In the demo, the Approve and Reject buttons stand in for the manager's reply mail.
+
 ## Path notes from the desk
 
 - New booking: classify → extract → case → policy → search/quote → reply → next actions.
-- Confirmation: match the selected flight → revalidate → build the payload when it is safe → acknowledge the traveller.
+- Confirmation: match the selected flight → revalidate → build the payload and hold it → ask the reporting manager to approve the exact fare → on approval release the payload to TravelOne → acknowledge the traveller. A reject closes the case. No answer escalates to the desk. If the fare moves after approval, the manager approves again.
 - Change: update preferences → search again → revised quotation.
 - Incomplete: missing fields block search. The desk asks. It does not guess.
 - FYI: do not search and do not book.

@@ -13,7 +13,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Vibrium Travel Suite",
   description:
-    "Vibrium Travel Suite — command center for corporate desk, forex, traveler care, airlines, hotels, and ride planning.",
+    "Vibrium Travel Suite — command center for corporate desk, forex, traveler care, airlines, hotels, trip planning, and call audit.",
 };
 
 /** Restores the collapsed sidebar before first paint so the rail never jumps on load. */

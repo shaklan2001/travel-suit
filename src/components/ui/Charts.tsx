@@ -130,6 +130,77 @@ export function WeekColumns({ title, week }: WeekColumnsProps) {
   );
 }
 
+interface MixRow {
+  label: string;
+  auto: number;
+  human: number;
+}
+
+/** Stacked horizontal bars: per process, how much agents closed and how much needed a person. */
+export function ProcessMixBars({ title, rows }: { title: string; rows: MixRow[] }) {
+  const [active, setActive] = useState<number | null>(null);
+  const max = Math.max(...rows.map((row) => row.auto + row.human), 1);
+
+  return (
+    <figure className="card chart-card">
+      <figcaption className="chart-head">
+        <span>
+          <strong>{title}</strong>
+          <small>Last 7 days, by process</small>
+        </span>
+      </figcaption>
+      <div className="chart-legend" aria-hidden="true">
+        <span>
+          <i className="swatch series-1" /> Closed by agents
+        </span>
+        <span>
+          <i className="swatch series-2" /> Needed a person
+        </span>
+      </div>
+      <ul className="stage-bars mix-bars" onMouseLeave={() => setActive(null)}>
+        {rows.map((row, index) => {
+          const total = row.auto + row.human;
+          return (
+            <li
+              key={row.label}
+              className={active === index ? "active" : undefined}
+              onMouseEnter={() => setActive(index)}
+              onFocus={() => setActive(index)}
+              onBlur={() => setActive(null)}
+              tabIndex={0}
+              aria-label={`${row.label}: ${row.auto} closed by agents, ${row.human} needed a person`}
+            >
+              <span className="stage-label">{row.label}</span>
+              <span className="mix-track">
+                <span className="mix-stack" style={{ width: `${(total / max) * 100}%` }}>
+                  <span className="mix-seg series-1" style={{ flexGrow: row.auto }} />
+                  <span className="mix-seg series-2" style={{ flexGrow: row.human }} />
+                </span>
+              </span>
+              <span className="stage-value">{total}</span>
+              {active === index ? (
+                <span className="chart-tip" role="tooltip">
+                  <b>{row.label}</b>
+                  <span>
+                    <i className="swatch series-1" /> {row.auto} closed by agents
+                  </span>
+                  <span>
+                    <i className="swatch series-2" /> {row.human} needed a person
+                  </span>
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <ChartTable
+        headers={["Process", "Closed by agents", "Needed a person"]}
+        rows={rows.map((row) => [row.label, String(row.auto), String(row.human)])}
+      />
+    </figure>
+  );
+}
+
 function ChartTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
     <details className="chart-table">

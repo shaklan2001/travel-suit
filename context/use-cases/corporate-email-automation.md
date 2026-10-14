@@ -55,6 +55,10 @@ The AI does not paste the raw API body into the customer email. It writes a read
 
 Illustrative rupee amounts in explanations are not fares. Nothing in this project hardcodes a price.
 
+## Manager approval before ticketing
+
+After a confirmation and a revalidated fare, the booking payload is prepared and held. The traveller's reporting manager approves the exact fare before the payload is released to TravelOne. Reject closes the case. A fare that moves after approval needs a new approval. Who the approver is, and any fare threshold, come from client configuration.
+
 ## After the traveller says yes
 
 That is not this milestone.

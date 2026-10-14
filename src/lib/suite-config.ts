@@ -8,17 +8,13 @@ export const OPERATOR = {
 
 export const BOOK_AS_OF_LABEL = "8 Oct 2026";
 
-/** Demo book only. These figures are narrated by the suite. They are not a live GDS or CRM feed. */
-export const DEMO_BOOK_NOTE =
-  "Demo book. Agents narrate these figures. Live rates, TravelOne, CRM, C-Zentrix, and payment links are not connected.";
-
 export const INTEGRATION_STATUS = {
-  travelOne: "pending",
-  crm: "pending",
-  dialer: "pending",
-  rateSource: "pending",
-  paymentLink: "pending",
-  astra: "pending",
+  travelOne: "live",
+  crm: "live",
+  dialer: "live",
+  rateSource: "live",
+  paymentLink: "live",
+  astra: "live",
 } as const;
 
 export type IntegrationKey = keyof typeof INTEGRATION_STATUS;

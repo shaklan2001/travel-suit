@@ -4,11 +4,17 @@ import { useCallback, useEffect, useState, type FocusEvent, type MouseEvent, typ
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getProcess, PROCESSES } from "../../data/book";
-import { DEMO_BOOK_NOTE, OPERATOR } from "../../lib/suite-config";
+import { OPERATOR } from "../../lib/suite-config";
 import { CommandPalette } from "./CommandPalette";
 import { SuiteNavLink } from "./SuiteNavLink";
 
-const NAV_GROUPS = ["Book", "Care"] as const;
+const NAV_GROUPS = ["Plan", "Book", "Care", "Audit"] as const;
+/** Suite-wide pages that are not a process module: the Vibrium automation layer. */
+const AUTOMATION_LINKS = [
+  { id: "agents", href: "/agents", label: "Digital workers" },
+  { id: "workflows", href: "/workflows", label: "Workflows" },
+  { id: "roi", href: "/roi", label: "ROI model" },
+] as const;
 const LOGO_SRC = "https://vibrium-artifacts.s3.ap-south-1.amazonaws.com/site-artifacts/Vibrium-Logo.png";
 const COLLAPSE_KEY = "vts.sidebar.collapsed";
 const DESKTOP_QUERY = "(min-width: 981px)";
@@ -47,7 +53,22 @@ function NavGlyph({ id }: { id: string }) {
   if (id === "post") {
     return <Glyph><circle cx="12" cy="12" r="8" /><path d="m8.5 12.5 2.5 2.5 4.5-5" /></Glyph>;
   }
-  return <Glyph><circle cx="6" cy="17" r="2" /><circle cx="18" cy="17" r="2" /><path d="M8 17h8M6 17 8 8h9l2 6" /></Glyph>;
+  if (id === "planner") {
+    return <Glyph><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5 5-2z" /></Glyph>;
+  }
+  if (id === "audit") {
+    return <Glyph><path d="M9 4h6v3H9z" /><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></Glyph>;
+  }
+  if (id === "agents") {
+    return <Glyph><rect x="5" y="8" width="14" height="11" rx="3" /><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16h5" /></Glyph>;
+  }
+  if (id === "workflows") {
+    return <Glyph><circle cx="6" cy="6" r="2" /><circle cx="18" cy="12" r="2" /><circle cx="6" cy="18" r="2" /><path d="M8 6h4a4 4 0 0 1 4 4M8 18h4a4 4 0 0 0 4-4" /></Glyph>;
+  }
+  if (id === "roi") {
+    return <Glyph><path d="M4 19V5" /><path d="M4 19h16" /><path d="m7 15 4-4 3 3 5-6" /><path d="M16 8h3v3" /></Glyph>;
+  }
+  return <Glyph><circle cx="12" cy="12" r="8" /></Glyph>;
 }
 
 /** Suite › Group › Process › Section, derived from the route. */
@@ -55,6 +76,11 @@ function useBreadcrumbs(pathname: string) {
   const [processId, section] = pathname.split("/").filter(Boolean);
   const processModule = processId && processId !== "home" ? getProcess(processId) : null;
   const crumbs: { label: string; href?: string }[] = [{ label: "Travel Suite", href: "/home" }];
+  const automationPage = AUTOMATION_LINKS.find((link) => link.id === processId);
+  if (automationPage) {
+    crumbs.push({ label: "Automation" }, { label: automationPage.label });
+    return crumbs;
+  }
 
   if (!processModule) {
     crumbs.push({ label: "Command Center" });
@@ -66,7 +92,8 @@ function useBreadcrumbs(pathname: string) {
     return crumbs;
   }
   crumbs.push({ label: processModule.menuLabel, href: `/${processModule.id}` });
-  crumbs.push({ label: SECTION_LABELS[section] ?? processModule.workspaceLabel ?? "Queue" });
+  const extra = processModule.extraTabs?.find((tab) => tab.slug === section);
+  crumbs.push({ label: extra?.label ?? SECTION_LABELS[section] ?? processModule.workspaceLabel ?? "Queue" });
   return crumbs;
 }
 
@@ -81,7 +108,7 @@ export function SuiteShell({ children }: SuiteShellProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Book: true, Care: true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Plan: true, Book: true, Care: true, Audit: true, Automation: true });
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
 
   // The inline script in the root layout sets data-rail before first paint; mirror it, then enable transitions.
@@ -145,6 +172,11 @@ export function SuiteShell({ children }: SuiteShellProps) {
     setTip({ label: target.dataset.label ?? "", top: rect.top + rect.height / 2 });
   }
 
+
+  // The website widget's iframe page renders bare, without the suite around it.
+  if (pathname.startsWith("/embed")) {
+    return <>{children}</>;
+  }
 
   return (
     <>
@@ -238,6 +270,35 @@ export function SuiteShell({ children }: SuiteShellProps) {
               </div>
             );
           })}
+          <div className="nav-group">
+            <button
+              className="nav-section"
+              type="button"
+              aria-expanded={isCollapsed || openGroups.Automation !== false}
+              aria-controls="nav-group-automation"
+              tabIndex={isCollapsed ? -1 : 0}
+              onClick={() => setOpenGroups((current) => ({ ...current, Automation: current.Automation === false }))}
+            >
+              <span className="fade-label">Automation</span>
+              <svg className={isCollapsed || openGroups.Automation !== false ? "chevron open" : "chevron"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </button>
+            <div
+              className={isCollapsed || openGroups.Automation !== false ? "nav-group-items open" : "nav-group-items"}
+              id="nav-group-automation"
+              inert={!(isCollapsed || openGroups.Automation !== false)}
+            >
+              <div>
+                {AUTOMATION_LINKS.map((link) => (
+                  <SuiteNavLink key={link.id} className="nav-link" href={link.href} label={link.label}>
+                    <NavGlyph id={link.id} />
+                    <span className="fade-label">{link.label}</span>
+                  </SuiteNavLink>
+                ))}
+              </div>
+            </div>
+          </div>
         </nav>
         <div className="account" data-label={`${OPERATOR.name} · ${OPERATOR.role}`} onMouseOver={showTip} onMouseLeave={() => setTip(null)}>
           <div className="account-avatar" aria-hidden="true">{OPERATOR.initials}</div>
@@ -279,15 +340,11 @@ export function SuiteShell({ children }: SuiteShellProps) {
               <span>Jump to…</span>
               <kbd>⌘K</kbd>
             </button>
-            <span className="status-chip" title={DEMO_BOOK_NOTE}>
-              <i aria-hidden="true" />
-              Demo book
-            </span>
           </div>
         </header>
         {children}
         <footer className="suite-footer">
-          <p>{DEMO_BOOK_NOTE}</p>
+          <p>Vibrium Travel Suite</p>
         </footer>
       </div>
     </div>

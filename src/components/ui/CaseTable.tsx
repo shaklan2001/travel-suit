@@ -2,7 +2,7 @@ import type { QueueCase } from "../../data/types";
 
 export function CaseTable({ cases }: { cases: QueueCase[] }) {
   if (cases.length === 0) {
-    return <p>No open cases in this demo slice.</p>;
+    return <p>No open cases.</p>;
   }
 
   return (

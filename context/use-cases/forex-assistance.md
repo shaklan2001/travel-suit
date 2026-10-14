@@ -2,12 +2,16 @@
 
 Source: Vibrium project context for Thomas Cook India (TCIL) Forex, 8 Oct 2026. Owner: Nishant Shaklan.
 
-Two use cases, one process module.
+This module is the forex sale only. Auditing the calls that sellers make (the QC Agent) is its own module, Call Audit, in `call-audit.md`. Do not mix the two.
 
-| # | Use case | What it does | Priority |
-|---|---|---|---|
-| 1 | QC Agent | Transcribes recorded sales calls and scores the seller on TCIL's 31-parameter quality form, with evidence | First. Audit data already exists |
-| 2 | Forex voice agent, Ravi | Talks to a forex lead, understands the trip, recommends a product, quotes from a live rate source, and completes the transaction including payment | Second, designed in parallel |
+## Flow in the suite
+
+1. **Enquiry.** Toll-free call, WhatsApp, website, Forex app, or Blinkit form: buy, sell, reload, or remittance.
+2. **Forex Desk bot answers.** Picks up every enquiry, answers documents, timings, and how-it-works questions, and asks if the customer wants to go ahead. It never quotes a rate. Not interested → closed as answered.
+3. **Ravi captures the need.** Product, currency, amount, travel date, purpose, documents, and city. Cash or card only once the need is clear.
+4. **Rate Desk quotes from the live rate.** Rate, charges, and TCS for the financial year. Source down → no number.
+5. **Optional advance.** If the customer wants to lock the rate, Ravi sends a payment link (30 minutes; rate held 48 hours). No card number on the call.
+6. **Branch visit, always.** Branch Handoff books the nearest branch and a slot and sends the originals to bring. The customer visits; KYC is done in person, the balance is paid, and the card or cash is handed over. Doorstep only where the branch confirms it.
 
 One BRD per use case. Anything outside the SOW and the BRD is out of scope. The BRD needs process flows, the technology stack, and a high-level architecture diagram.
 
@@ -45,24 +49,6 @@ Inbound: toll-free connects a seller. The seller searches by phone or email and 
 - Payment link, never card numbers on the call. Link valid 30 minutes. After payment, rate held 48 hours. Customer visits the branch inside that window.
 - Modes: net banking (INR 50), UPI (no charge, recommended), debit or credit card (1.7%), NEFT/RTGS only to the Thomas Cook India Pvt. Ltd. account.
 - If the customer refuses online payment, rebut, then route the lead to the branch and email the template.
-
-## QC Agent `[CONFIRMED]`
-
-- Unit of audit is one opportunity across all of its calls.
-- Start with first calls, inbound and outbound. Then follow-up chains. Then lost calls.
-- Phase 1 input is files on a password-protected drive. Phase 2 is the C-Zentrix audio stream plus the CRM API.
-- Each parameter is pass (full weight) or fail (0). No partial credit. Weights sum to 100.
-- One interruption fails the interruption parameter.
-- A parameter must be done in totality. A partial card-features pitch fails.
-- N/A handling is `[PENDING]`. The sheet has no N/A column. Non-applicable items were marked Green.
-- Parameters 25 and 27–29 need email or CRM evidence, not only audio.
-- The acceptable score is TCIL's number and will change. Keep it in config.
-- Compare AI scores to the September 2026 human audits. Separate "AI wrong" from "human missed".
-- The three section names (Soft Skills, Product & Sales, Tool Handling) are not on the sheet. Any section column is `[ASSUMPTION]`.
-
-The 31 parameter texts and weights are in `src/data/forex-scorecard.ts`, which is the config copy of the September sheet. Real recordings, opportunity ids, and transcript PII are not in the repo.
-
-Conceptual pipeline, technology not finalised `[ASSUMPTION]`: ingest and group by opportunity, encrypted storage, telephony speech-to-text with speaker labels and timestamps, PII redaction for display, silence and overlap features, a per-parameter judgement with a quote and a timestamp, optional CRM and email for the tool-handling rows, a score from config weights, human override with an audit log, and a dashboard.
 
 ## Ravi `[CONFIRMED]` plus the conflicts to avoid
 

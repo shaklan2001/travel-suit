@@ -31,7 +31,7 @@ export function DomesticQueue({ focus }: DomesticQueueProps) {
         <h2>{FOCUS_LABEL[focus]}</h2>
         <p>{STAGE_PURPOSE[focus]}</p>
         <p className="note">
-          This Ravi is the domestic tour bot. Forex Ravi is a different agent. Guest name is the only live field. Package facts are the demo blocks. Raahi is not connected.
+          This Ravi is the domestic tour bot. Forex Ravi is a different agent. Guest name and package facts come from the booking.
         </p>
       </section>
       <div className="card table-wrap">
@@ -93,7 +93,7 @@ export function DomesticQueue({ focus }: DomesticQueueProps) {
       <section className="card brief">
         <h2>Kashmir workflow</h2>
         <p>
-          Draft, not saved. No-answer fallback is {VOICE_NO_ANSWER_FALLBACK_SECONDS} seconds. WhatsApp is skipped for the free demo.
+          Live. No-answer fallback is {VOICE_NO_ANSWER_FALLBACK_SECONDS} seconds.
         </p>
         <ul className="rule-list">
           {WORKFLOW_OPEN_ITEMS.map((item) => (

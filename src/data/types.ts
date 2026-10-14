@@ -1,7 +1,7 @@
 export type AgentKind = "conversational" | "functional" | "analytical";
 export type Autonomy = "fully_auto" | "auto_with_approval" | "draft" | "suggest";
 export type Severity = "critical" | "warning" | "info";
-export type QueueKind = "corporate" | "forex" | "domestic" | "rides" | "cases";
+export type QueueKind = "corporate" | "forex" | "audit" | "domestic" | "planner" | "hotels" | "cases";
 
 export interface Kpi {
   id: string;
@@ -104,9 +104,15 @@ export interface ProcessModule {
   cases: QueueCase[];
   queueKind: QueueKind;
   story: StoryStep[];
+  /** Title over the main story when a module has more than one flow. Defaults to "How this works". */
+  storyTitle?: string;
+  /** Further flows in the same module, each with its own four steps. */
+  moreStories?: { title: string; steps: StoryStep[] }[];
   dashboard?: ModuleDashboard;
   /** Label of the fourth tab, where the work happens. Defaults to "Queue". */
   workspaceLabel?: string;
+  /** Further workspace tabs after the fourth, each at /<module>/<slug>. */
+  extraTabs?: { slug: string; label: string }[];
 }
 
 export const AUTONOMY_LABELS: Record<Autonomy, string> = {

@@ -12,6 +12,9 @@ interface PaletteItem {
 
 const ITEMS: PaletteItem[] = [
   { href: "/home", title: "Suite Home", hint: "Command Center" },
+  { href: "/agents", title: "Digital workers", hint: "Automation · voice and worker agents" },
+  { href: "/workflows", title: "Workflows", hint: "Automation · triggers, agents, approvals" },
+  { href: "/roi", title: "ROI model", hint: "Automation · forex calling agent value for your business" },
   ...PROCESSES.flatMap((processModule) => {
     const base = `/${processModule.id}`;
     return [
@@ -19,6 +22,7 @@ const ITEMS: PaletteItem[] = [
       { href: `${base}/squad`, title: `${processModule.menuLabel} — Agentic Squad`, hint: processModule.group },
       { href: `${base}/map`, title: `${processModule.menuLabel} — Process Map`, hint: processModule.group },
       { href: `${base}/queue`, title: `${processModule.menuLabel} — ${processModule.workspaceLabel ?? "Queue"}`, hint: processModule.group },
+      ...(processModule.extraTabs ?? []).map((tab) => ({ href: `${base}/${tab.slug}`, title: `${processModule.menuLabel} — ${tab.label}`, hint: processModule.group })),
     ];
   }),
 ];

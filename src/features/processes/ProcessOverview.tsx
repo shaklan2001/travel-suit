@@ -28,7 +28,10 @@ export function ProcessOverview({ processId }: ProcessOverviewProps) {
 
   return (
     <ProcessFrame processModule={processModule}>
-      <StoryStrip steps={processModule.story} />
+      <StoryStrip steps={processModule.story} title={processModule.storyTitle} />
+      {processModule.moreStories?.map((story) => (
+        <StoryStrip key={story.title} steps={story.steps} title={story.title} />
+      ))}
 
       <KpiGrid kpis={processModule.kpis} />
 

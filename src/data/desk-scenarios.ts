@@ -11,7 +11,7 @@ export interface DeskScenario {
 }
 
 const VANILLA_SEARCH_EMAIL = `From: rahul@abccorp.in
-To: corporatetravel@thomascook.in
+To: corporatetravel@company.com
 Subject: Flight booking
 
 Hi Team,
@@ -21,7 +21,7 @@ Both flights preferably morning. Economy class.
 Please share options.`;
 
 const NEW_REQUEST_EMAIL = `From: ananya.mehta@acmecorp.in
-To: corporatetravel@thomascook.in
+To: corporatetravel@company.com
 Cc: ea.rahul@acmecorp.in
 Subject: Flight booking request — Ananya Mehta — 12 Oct DEL-BOM
 
@@ -46,7 +46,7 @@ Senior Manager — Sales
 Acme Corp India`;
 
 const CONFIRMATION_EMAIL = `From: ananya.mehta@acmecorp.in
-To: corporatetravel@thomascook.in
+To: corporatetravel@company.com
 Subject: Re: Flight options — Ananya Mehta — 12 Oct DEL-BOM
 
 Hi,
@@ -60,7 +60,7 @@ Thanks,
 Ananya`;
 
 const MODIFICATION_EMAIL = `From: ananya.mehta@acmecorp.in
-To: corporatetravel@thomascook.in
+To: corporatetravel@company.com
 Subject: Re: Flight options — Ananya Mehta — 12 Oct DEL-BOM
 
 Hi team,
@@ -73,7 +73,7 @@ Regards,
 Ananya`;
 
 const CLARIFICATION_EMAIL = `From: rahul.ea@acmecorp.in
-To: corporatetravel@thomascook.in
+To: corporatetravel@company.com
 Subject: Booking needed for Mr Sharma
 
 Hi,
@@ -86,7 +86,7 @@ Acme Corp India`;
 
 const FYI_EMAIL = `From: ea.rahul@acmecorp.in
 To: sales.leadership@acmecorp.in
-Cc: corporatetravel@thomascook.in
+Cc: corporatetravel@company.com
 Subject: FYI — Ananya travel next week
 
 Team,
@@ -96,7 +96,7 @@ FYI only — Ananya will be in Mumbai next week for client meetings. No booking 
 Rahul`;
 
 const CANCELLATION_EMAIL = `From: ananya.mehta@acmecorp.in
-To: corporatetravel@thomascook.in
+To: corporatetravel@company.com
 Subject: Re: Flight options — Ananya Mehta — 12 Oct DEL-BOM
 
 Hi,
@@ -109,10 +109,10 @@ Ananya`;
 export const DESK_SCENARIOS: DeskScenario[] = [
   {
     id: "vanilla-search",
-    orderLabel: "POC · Search and quote",
+    orderLabel: "Search and quote",
     title: "Delhi → Mumbai · 13 Dec return 15 Dec · morning · economy",
     intent: "new_request",
-    summary: "SOTC vanilla scenario. Understand the email. Search and quote come from TravelOne when UAT is connected.",
+    summary: "Standard search request. Understand the email. Search and quote come from TravelOne.",
     email: VANILLA_SEARCH_EMAIL,
     bullets: [
       "Intent classified as new_request",
@@ -142,7 +142,7 @@ export const DESK_SCENARIOS: DeskScenario[] = [
     orderLabel: "2 · Confirmation",
     title: "Re: Flight options — Ananya Mehta — 12 Oct DEL-BOM",
     intent: "confirmation",
-    summary: "Confirmation is understood. Revalidation and booking stay in later phases.",
+    summary: "Confirmation is understood. Fare revalidated, payload prepared, then the manager approves before release.",
     email: CONFIRMATION_EMAIL,
     bullets: [
       "Intent classified as confirmation",

@@ -7,10 +7,10 @@ const KIND_LABELS: Record<StoryStep["kind"], string> = {
 };
 
 /** The process in four plain steps: who starts it, what the agents do, where a person decides. */
-export function StoryStrip({ steps }: { steps: StoryStep[] }) {
+export function StoryStrip({ steps, title = "How this works" }: { steps: StoryStep[]; title?: string }) {
   return (
-    <section className="story" aria-label="How this works">
-      <p className="kicker accent">How this works</p>
+    <section className="story" aria-label={title}>
+      <p className="kicker accent">{title}</p>
       <ol className="story-steps">
         {steps.map((step, index) => (
           <li key={`${step.who}-${index}`} className={`story-step ${step.kind}`}>
