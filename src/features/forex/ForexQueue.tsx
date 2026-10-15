@@ -131,11 +131,13 @@ export function ForexQueue() {
                     <small>
                       {item.product === "Question" ? item.purpose : `${item.product} · ${foreign(item)} · ${item.destination}`}
                     </small>
-                    <em>
-                      {item.channel} · {item.received}
-                    </em>
+                    <span className="pl-lead-meta">
+                      <span className={`fx-stage ${stages[item.code]}`}>{STAGE_LABELS[stages[item.code]]}</span>
+                      <em>
+                        {item.channel} · {item.received}
+                      </em>
+                    </span>
                   </span>
-                  <span className={`fx-stage ${stages[item.code]}`}>{STAGE_LABELS[stages[item.code]]}</span>
                 </button>
               </li>
             ))}

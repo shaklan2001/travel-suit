@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { OUTCOME_LABELS, OUTCOME_ORDER, type MailOutcome } from "../../../data/inbox-triage";
 import { ComposeWindow } from "./ComposeWindow";
+import { ProviderMark } from "./ConnectPanel";
 import { Icon } from "./icons";
 import { MailList } from "./MailList";
 import { MailView } from "./MailView";
-import { outcomeOf, type InboxItem, type useMailbox } from "./useMailbox";
+import { outcomeOf, PROVIDER_LABELS, type InboxItem, type useMailbox } from "./useMailbox";
 
 type Mailbox = ReturnType<typeof useMailbox>;
 type NavView = "inbox" | "starred" | MailOutcome;
@@ -67,8 +68,8 @@ export function GmailClient({ mailbox }: { mailbox: Mailbox }) {
           <Icon name="menu" />
         </button>
         <span className="gm-brand">
-          <Icon name="mail" className="gm-brand-mark" />
-          Mail
+          <ProviderMark provider={mailbox.provider} />
+          {PROVIDER_LABELS[mailbox.provider].name}
         </span>
         <label className="gm-search">
           <Icon name="search" />
@@ -108,7 +109,7 @@ export function GmailClient({ mailbox }: { mailbox: Mailbox }) {
               <div className="gm-account-menu">
                 <strong>Corporate travel desk</strong>
                 <span>{mailbox.mailboxAddress}</span>
-                <small>Connected.</small>
+                <small>Connected through {PROVIDER_LABELS[mailbox.provider].via}, read-only.</small>
                 <button
                   type="button"
                   className="gm-outline-button"

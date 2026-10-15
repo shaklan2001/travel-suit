@@ -28,6 +28,15 @@ export const DEMO_MAILBOX_ADDRESS = "corporatetravel@company.com";
 
 export type MailboxSource = "none" | "gmail" | "demo";
 
+/** Which mail system the desk mailbox lives on. */
+export type MailProvider = "outlook" | "gmail" | "forward";
+
+export const PROVIDER_LABELS: Record<MailProvider, { name: string; via: string }> = {
+  outlook: { name: "Outlook", via: "Microsoft 365" },
+  gmail: { name: "Gmail", via: "Google Workspace" },
+  forward: { name: "Mail", via: "mail forwarding" },
+};
+
 export interface InboxItem {
   mail: InboxMail;
   /** Null while the fleet is still reading the mail. */
@@ -77,6 +86,7 @@ const MAX_PARALLEL_FLEET_RUNS = 3;
 export function useMailbox() {
   const [source, setSource] = useState<MailboxSource>("none");
   const [mailboxAddress, setMailboxAddress] = useState<string | null>(null);
+  const [provider, setProvider] = useState<MailProvider>("outlook");
   const [items, setItems] = useState<InboxItem[]>([]);
   const [checking, setChecking] = useState(false);
   const [toast, setToast] = useState<MailboxToast | null>(null);
@@ -244,6 +254,7 @@ export function useMailbox() {
         if (!cancelled && status?.connected) {
           setMailboxAddress(status.email);
           setSource("gmail");
+          setProvider("gmail");
         }
       })
       .catch(() => undefined);
@@ -272,13 +283,17 @@ export function useMailbox() {
     });
   }, [later, receive, resetInbox]);
 
-  const connect = useCallback(() => {
-    if (LIVE_GMAIL) {
-      window.location.assign("/api/gmail/connect");
-      return;
-    }
-    startDemo();
-  }, [startDemo]);
+  const connect = useCallback(
+    (next: MailProvider = "gmail") => {
+      setProvider(next);
+      if (next === "gmail" && LIVE_GMAIL) {
+        window.location.assign("/api/gmail/connect");
+        return;
+      }
+      startDemo();
+    },
+    [startDemo],
+  );
 
   const disconnect = useCallback(async () => {
     if (source === "gmail") {
@@ -331,6 +346,7 @@ export function useMailbox() {
 
   return {
     source,
+    provider,
     mailboxAddress,
     items,
     checking,

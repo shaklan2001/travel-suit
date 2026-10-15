@@ -104,11 +104,13 @@ export function QuoteDesk() {
                     <span className="pl-lead-text">
                       <strong>{item.names}</strong>
                       <small>{leadTitle(item)}</small>
-                      <em>
-                        {CHANNEL_LABELS[item.channel]} · {item.received}
-                      </em>
+                      <span className="pl-lead-meta">
+                        <span className={`pl-status ${statuses[item.code]}`}>{STATUS_LABELS[statuses[item.code]]}</span>
+                        <em>
+                          {CHANNEL_LABELS[item.channel]} · {item.received}
+                        </em>
+                      </span>
                     </span>
-                    <span className={`pl-status ${statuses[item.code]}`}>{STATUS_LABELS[statuses[item.code]]}</span>
                   </button>
                 </li>
               );
