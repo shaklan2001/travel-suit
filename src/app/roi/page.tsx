@@ -1,5 +1,5 @@
-import { RoiModelPage } from "../../features/roi/RoiModelPage";
+import { SuiteRoiPage } from "../../features/roi/SuiteRoiPage";
 
 export default function RoiRoute() {
-  return <RoiModelPage />;
+  return <SuiteRoiPage />;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AOV_PRESETS,
@@ -157,7 +158,12 @@ export function RoiModelPage() {
     <main className="page roi-page">
       <header className="page-header roi-header">
         <div>
-          <p className="kicker">Automation · Forex</p>
+          <p className="kicker">
+            <Link href="/roi" className="sr-back">
+              Suite ROI
+            </Link>{" "}
+            · Forex module
+          </p>
           <h1>
             Forex calling agent <span className="gradient-text">ROI</span>
           </h1>

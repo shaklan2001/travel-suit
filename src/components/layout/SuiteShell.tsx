@@ -13,7 +13,7 @@ const NAV_GROUPS = ["Plan", "Book", "Care", "Audit"] as const;
 const AUTOMATION_LINKS = [
   { id: "agents", href: "/agents", label: "Digital workers" },
   { id: "workflows", href: "/workflows", label: "Workflows" },
-  { id: "roi", href: "/roi", label: "ROI model" },
+  { id: "roi", href: "/roi", label: "Suite ROI" },
 ] as const;
 const LOGO_SRC = "https://vibrium-artifacts.s3.ap-south-1.amazonaws.com/site-artifacts/Vibrium-Logo.png";
 const COLLAPSE_KEY = "vts.sidebar.collapsed";

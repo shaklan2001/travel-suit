@@ -23,7 +23,7 @@ export function QueuePage({ processId }: QueuePageProps) {
   return (
     <ProcessFrame processModule={processModule}>
       {processModule.queueKind === "corporate" ? <CorporateQueue /> : null}
-      {processModule.queueKind === "forex" ? <ForexQueue cases={processModule.cases} /> : null}
+      {processModule.queueKind === "forex" ? <ForexQueue /> : null}
       {processModule.queueKind === "audit" ? <AuditQueue cases={processModule.cases} /> : null}
       {processModule.queueKind === "domestic" ? <DomesticQueue focus={focusFor(processModule.id)} /> : null}
       {processModule.queueKind === "planner" ? <TripPlanner /> : null}
