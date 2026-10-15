@@ -1,8 +1,10 @@
+import type { FleetRun } from "../lib/fleet/types";
 import {
   INTENT_LABELS,
   MAX_PASTED_EMAIL_CHARACTERS,
   previewDeskEmail,
   type DeskPreview,
+  type FleetStepResult,
   type TravelIntent,
 } from "./corporate-desk";
 
@@ -26,12 +28,13 @@ export interface InboxMail {
   scriptedBullets?: string[];
 }
 
-export type MailOutcome = "needs_you" | "draft_ready" | "waiting" | "handled" | "not_travel";
+export type MailOutcome = "needs_you" | "awaiting_approval" | "draft_ready" | "waiting" | "handled" | "not_travel";
 
-export const OUTCOME_ORDER: MailOutcome[] = ["needs_you", "draft_ready", "waiting", "handled", "not_travel"];
+export const OUTCOME_ORDER: MailOutcome[] = ["needs_you", "awaiting_approval", "draft_ready", "waiting", "handled", "not_travel"];
 
 export const OUTCOME_LABELS: Record<MailOutcome, string> = {
   needs_you: "Needs you",
+  awaiting_approval: "Awaiting manager",
   draft_ready: "Draft ready",
   waiting: "Waiting on TravelOne",
   handled: "Handled",
@@ -47,6 +50,27 @@ export interface TripFacts {
   costCentre: string | null;
 }
 
+/**
+ * What the reporting manager is asked to approve. Nothing is released to TravelOne until they approve this exact fare.
+ * The manager is a role on the client profile. No address is invented here.
+ */
+export interface ApprovalRequest {
+  traveller: string;
+  route: string;
+  date: string;
+  flight: string;
+  fare: number | null;
+  costCentre: string | null;
+  reason: string;
+}
+
+/** What the real Vibrium worker fleet returned for a mail. Absent when the scripted triage decided. */
+export interface LiveFleet {
+  run: FleetRun;
+  steps: FleetStepResult[];
+  replySubject: string | null;
+}
+
 export interface MailDecision {
   outcome: MailOutcome;
   caseCode: string | null;
@@ -58,10 +82,21 @@ export interface MailDecision {
   draftReply: string | null;
   trip: TripFacts | null;
   preview: DeskPreview | null;
+  live?: LiveFleet | null;
+  /** Set when the manager has to approve before the payload is released. */
+  approval?: ApprovalRequest | null;
 }
 
+/**
+ * First gate, before any agent runs. A mail needs a concrete air-travel signal. Words like "book", "trip" or
+ * "travel" alone are not enough, because personal mail uses them too. The classifier makes the final call.
+ */
 const TRAVEL_SIGNALS =
-  /\b(flights?|travel|trip|booking|book|ticket(?:s|ing)?|itinerary|pnr|fare|airline|economy|business class|departure|return|one[- ]way|round[- ]trip|pax|indigo|air india|vistara|akasa)\b/i;
+  /\b(flights?|airlines?|airfares?|pnr|e-?tickets?|itinerary|one[- ]way|round[- ]trip|pax|economy class|business class|travel desk|corporate travel|ticketing|indigo|air india|vistara|akasa|spicejet)\b/i;
+
+/** Bulk and promotional mail is never a desk request, even when it mentions flights. */
+const BULK_SIGNALS =
+  /\b(unsubscribe|view in browser|newsletter|limited[- ]time offer|\d{1,3}% off|flash sale|lottery|you(?:'ve| have) won|claim your (?:prize|reward)|click here to (?:claim|win))\b/i;
 
 const ROUTE_CODES = /\b([A-Z]{3})\s*(?:-|–|—|→|to)\s*([A-Z]{3})\b/;
 const ROUTE_WORDS = /\bfrom\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)(?:\s*\([A-Z]{3}\))?\s+to\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/;
@@ -92,7 +127,7 @@ export function triageMail(mail: InboxMail): MailDecision {
       outcome: "not_travel",
       caseCode: null,
       intentLabel: "Not a travel request",
-      summary: "Intent Router read the mail and found no travel ask. No other agent woke up and no case was opened.",
+      summary: "Intent Router read the mail and found no corporate travel ask, so the desk left it alone. No reply, no agent woke up and no case was opened.",
       automated: ["Read by Intent Router", "No case opened"],
       humanAction: null,
       nextAutomatic: null,
@@ -146,7 +181,7 @@ function decisionFor(
         automated: ["Classified as a new request", "Trip read from the mail", linked, "Client policy applied"],
         humanAction: null,
         nextAutomatic:
-          "Meera runs the TravelOne search and Anika drafts the quotation as soon as TravelOne UAT is connected. Nothing is ticketed.",
+          "Meera runs the TravelOne search and Anika drafts the quotation straight away. Nothing is ticketed.",
         draftReply: null,
       };
     case "modification":
@@ -154,7 +189,7 @@ function decisionFor(
         outcome: "waiting",
         automated: ["Classified as a change", "New preference read from the mail", linked, "Earlier option kept unbooked"],
         humanAction: null,
-        nextAutomatic: "Meera searches again and Anika drafts a revised quotation once TravelOne UAT is connected.",
+        nextAutomatic: "Meera searches again and Anika drafts a revised quotation straight away.",
         draftReply: null,
       };
     case "confirmation":
@@ -223,6 +258,9 @@ function missingFieldsText(trip: TripFacts | null): string {
 }
 
 export function looksLikeTravelMail(subject: string, body: string): boolean {
+  if (BULK_SIGNALS.test(subject) || BULK_SIGNALS.test(body)) {
+    return false;
+  }
   return TRAVEL_SIGNALS.test(subject) || TRAVEL_SIGNALS.test(body) || ROUTE_CODES.test(body);
 }
 
@@ -242,6 +280,25 @@ export function extractTrip(body: string): TripFacts {
   };
 }
 
+/** Trip chips from what the extraction worker returned, instead of from regexes over the body. */
+export function extractTripFromFleet(extraction: Record<string, unknown>): TripFacts | null {
+  const pick = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
+  const place = (airport: unknown, city: unknown) => pick(airport) ?? pick(city);
+  const origin = place(extraction.originAirport, extraction.originCity);
+  const destination = place(extraction.destinationAirport, extraction.destinationCity);
+  const passengers = Number(extraction.passengers);
+
+  const trip: TripFacts = {
+    route: origin && destination ? `${origin} → ${destination}` : null,
+    date: pick(extraction.departureDate),
+    cabin: pick(extraction.cabin),
+    timing: pick(extraction.preferredTimeWindow),
+    passengers: Number.isFinite(passengers) && passengers > 0 ? String(passengers) : null,
+    costCentre: pick(extraction.costCentre),
+  };
+  return Object.values(trip).some((value) => value !== null) ? trip : null;
+}
+
 /** Classify on the newest message only. Quoted history must not flip the intent. */
 export function stripQuotedReply(body: string): string {
   const kept: string[] = [];
@@ -257,7 +314,7 @@ export function stripQuotedReply(body: string): string {
   return kept.join("\n").trim();
 }
 
-function composeThreadText(mail: InboxMail, latestBody: string): string {
+export function composeThreadText(mail: InboxMail, latestBody: string): string {
   const headers = [`From: ${mail.from}`, `To: ${mail.to}`];
   if (mail.cc) {
     headers.push(`Cc: ${mail.cc}`);

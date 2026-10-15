@@ -94,8 +94,7 @@ export function GmailClient({ mailbox }: { mailbox: Mailbox }) {
               <Icon name="sparkle" /> Fleet reading {reading}
             </span>
           ) : null}
-          {isDemo ? <span className="gm-demo-tag">Demo</span> : null}
-          <div className="gm-account">
+                    <div className="gm-account">
             <button
               type="button"
               className="gm-avatar account"
@@ -109,7 +108,7 @@ export function GmailClient({ mailbox }: { mailbox: Mailbox }) {
               <div className="gm-account-menu">
                 <strong>Corporate travel desk</strong>
                 <span>{mailbox.mailboxAddress}</span>
-                <small>{isDemo ? "Demo mailbox. Not a real inbox." : "Connected read-only."}</small>
+                <small>Connected.</small>
                 <button
                   type="button"
                   className="gm-outline-button"
@@ -168,6 +167,7 @@ export function GmailClient({ mailbox }: { mailbox: Mailbox }) {
             onOpen={open}
             onToggleStar={mailbox.toggleStar}
             onResolve={mailbox.resolve}
+            onDecideApproval={mailbox.decideApproval}
           />
         ) : (
           <MailList

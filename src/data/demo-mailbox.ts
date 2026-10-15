@@ -2,7 +2,7 @@ import { DESK_SCENARIOS } from "./desk-scenarios";
 import type { InboxMail } from "./inbox-triage";
 
 /**
- * Demo mailbox. The six CT-BT threads plus the SOTC vanilla mail arrive one by one,
+ * Demo mailbox. The six CT-BT threads plus the standard search mail arrive one by one,
  * the way they would on a connected inbox. Nothing here is a real mailbox.
  */
 

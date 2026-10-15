@@ -35,7 +35,6 @@ export function ConnectPanel({ onConnect }: { onConnect: () => void }) {
         <button className="primary-button gmail-button" type="button" onClick={onConnect}>
           <Icon name="mail" /> Connect Gmail
         </button>
-        <span className="meta">Demo: opens a sample desk mailbox. No Google account is used yet.</span>
       </div>
     </section>
   );

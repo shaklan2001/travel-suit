@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { CORPORATE_POC_NOTE } from "../../../data/corporate-desk";
-import { OUTCOME_LABELS, senderName, type MailDecision, type TripFacts } from "../../../data/inbox-triage";
+import { OUTCOME_LABELS, senderName, type ApprovalRequest, type MailDecision, type TripFacts } from "../../../data/inbox-triage";
+import { flightOptionsOf } from "../../../data/live-triage";
+import type { FleetRun } from "../../../lib/fleet/types";
 import { Icon } from "./icons";
 import { avatarFor, fullTime, listTime, senderAddress, snippet } from "./mail-format";
-import { outcomeOf, type InboxItem } from "./useMailbox";
+import { outcomeOf, type InboxItem, type ManagerVerdict, type SentReply } from "./useMailbox";
 
 interface MailViewProps {
   item: InboxItem;
@@ -17,9 +19,21 @@ interface MailViewProps {
   onOpen: (id: string) => void;
   onToggleStar: (id: string) => void;
   onResolve: (id: string, resolution: string, toastText: string) => void;
+  onDecideApproval: (id: string, verdict: ManagerVerdict) => void;
 }
 
-export function MailView({ item, caseThread, position, canSend, onBack, onStep, onOpen, onToggleStar, onResolve }: MailViewProps) {
+export function MailView({
+  item,
+  caseThread,
+  position,
+  canSend,
+  onBack,
+  onStep,
+  onOpen,
+  onToggleStar,
+  onResolve,
+  onDecideApproval,
+}: MailViewProps) {
   const { mail, decision } = item;
   const outcome = outcomeOf(item);
   const thread = caseThread.length > 0 ? caseThread : [item];
@@ -57,7 +71,7 @@ export function MailView({ item, caseThread, position, canSend, onBack, onStep, 
         </header>
 
         {decision ? (
-          <FleetCard item={item} decision={decision} onResolve={onResolve} />
+          <FleetCard item={item} decision={decision} onResolve={onResolve} onDecideApproval={onDecideApproval} />
         ) : (
           <section className="gm-fleet reading">
             <p className="gm-fleet-title">
@@ -76,10 +90,13 @@ export function MailView({ item, caseThread, position, canSend, onBack, onStep, 
           )}
         </div>
 
+        {item.sent ? <SentCard to={mail.from} sent={item.sent} /> : null}
+
         {decision?.draftReply && !item.resolution ? (
           <DraftReply
             key={mail.id}
             to={mail.from}
+            subject={decision.live?.replySubject ?? null}
             text={decision.draftReply}
             canSend={canSend}
             onSend={() => onResolve(mail.id, "Drafted reply sent by you", "Message sent")}
@@ -94,12 +111,15 @@ function FleetCard({
   item,
   decision,
   onResolve,
+  onDecideApproval,
 }: {
   item: InboxItem;
   decision: MailDecision;
   onResolve: (id: string, resolution: string, toastText: string) => void;
+  onDecideApproval: (id: string, verdict: ManagerVerdict) => void;
 }) {
-  const ranCount = decision.preview?.steps.filter((step) => step.status === "ran").length ?? 1;
+  const steps = decision.live?.steps ?? decision.preview?.steps ?? [];
+  const ranCount = steps.filter((step) => step.status === "ran").length || 1;
 
   return (
     <section className="gm-fleet" aria-live="polite">
@@ -115,6 +135,13 @@ function FleetCard({
             <strong>Closed.</strong> {item.resolution}.
           </span>
         </div>
+      ) : decision.approval ? (
+        <ApprovalPanel
+          request={decision.approval}
+          verdict={item.approval}
+          onDecide={(verdict) => onDecideApproval(item.mail.id, verdict)}
+          onTicketed={() => onResolve(item.mail.id, "Ticketed on TravelOne by you", "Case marked done")}
+        />
       ) : decision.humanAction ? (
         <div className="gm-fleet-action todo">
           <span>
@@ -160,13 +187,15 @@ function FleetCard({
         </p>
       ) : null}
 
-      {decision.preview ? (
+      {decision.live ? <LiveDetails run={decision.live.run} /> : null}
+
+      {steps.length > 0 ? (
         <details className="gm-fleet-steps">
           <summary>
-            {ranCount} of {decision.preview.steps.length} agents ran
+            {ranCount} of {steps.length} agents ran
           </summary>
           <ol>
-            {decision.preview.steps.map((step) => (
+            {steps.map((step) => (
               <li key={step.key} className={step.status}>
                 <span className="gm-step-status">{step.status}</span>
                 <span>
@@ -176,10 +205,162 @@ function FleetCard({
               </li>
             ))}
           </ol>
-          <p className="gm-fleet-note">{CORPORATE_POC_NOTE}</p>
+          <p className="gm-fleet-note">{decision.live ? LIVE_FLEET_NOTE : CORPORATE_POC_NOTE}</p>
         </details>
       ) : null}
     </section>
+  );
+}
+
+const LIVE_FLEET_NOTE =
+  "Vibrium workers read this mail. TravelOne search and revalidation run on the live booking API. Nothing is ticketed until a person approves.";
+
+const inr = (amount: number) => `₹${Math.round(amount).toLocaleString("en-IN")}`;
+const words = (value: unknown) => (typeof value === "string" ? value.replace(/_/g, " ") : "");
+
+/** What the workers produced beyond the headline: quoted options, fare check, booking payload, next steps. */
+function LiveDetails({ run }: { run: FleetRun }) {
+  const options = flightOptionsOf(run);
+  const { policy, revalidation, booking, orchestration } = run;
+  const questions = Array.isArray(orchestration?.clarifyingQuestions) ? (orchestration.clarifyingQuestions as string[]) : [];
+  const actions = Array.isArray(orchestration?.nextActions) ? (orchestration.nextActions as string[]) : [];
+  const warnings = Array.isArray(policy?.warnings) ? (policy.warnings as string[]) : [];
+  const bookingErrors = Array.isArray(booking?.validationErrors) ? (booking.validationErrors as string[]) : [];
+  const payload = booking?.payload as Record<string, unknown> | undefined;
+
+  return (
+    <div className="gm-live">
+      {policy ? (
+        <p className="gm-live-line">
+          <strong>Policy:</strong> {words(policy.policyStatus) || "checked"}
+          {policy.needsApprover ? " · approver needed" : ""}
+          {warnings.length > 0 ? ` · ${warnings.join("; ")}` : ""}
+        </p>
+      ) : null}
+
+      {options.length > 0 ? (
+        <table className="gm-live-options" aria-label="Flight options ranked by Meera">
+          <tbody>
+            {options.map((option) => (
+              <tr key={option.optionId} className={option.optionId === run.options?.recommendedOptionId ? "recommended" : undefined}>
+                <td>
+                  <strong>
+                    {option.airline} {option.flightNo}
+                  </strong>
+                  <small>{option.rationale}</small>
+                </td>
+                <td>
+                  {option.departureTime} → {option.arrivalTime}
+                  {option.duration ? <small>{option.duration}</small> : null}
+                </td>
+                <td className="fare">
+                  {inr(option.fare)}
+                  {option.optionId === run.options?.recommendedOptionId ? <small>Recommended</small> : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+
+      {revalidation ? (
+        <p className="gm-live-line">
+          <strong>Fare check:</strong> {words(revalidation.revalidationStatus)} · {inr(Number(revalidation.quotedFare) || 0)} →{" "}
+          {inr(Number(revalidation.revalidatedFare) || 0)}
+          {revalidation.requiresTravellerReconfirmation ? " · traveller must reconfirm" : ""}
+        </p>
+      ) : null}
+
+      {booking ? (
+        <details className="gm-live-payload">
+          <summary>
+            Booking payload · {booking.bookingReady ? "ready for TravelOne" : `held back${bookingErrors.length ? ` (${bookingErrors.length} gaps)` : ""}`}
+          </summary>
+          {bookingErrors.length > 0 ? (
+            <ul>
+              {bookingErrors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          ) : null}
+          <pre>{JSON.stringify(payload ?? {}, null, 2)}</pre>
+        </details>
+      ) : null}
+
+      {questions.length > 0 ? (
+        <div className="gm-live-block">
+          <strong>Questions for the sender</strong>
+          <ul>
+            {questions.map((question) => (
+              <li key={question}>{question}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {actions.length > 0 ? (
+        <div className="gm-live-block">
+          <strong>Next actions (Kabir)</strong>
+          <ol>
+            {actions.map((action) => (
+              <li key={action}>{action}</li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The gate before ticketing. The payload is prepared and held until the reporting manager approves this exact fare. */
+function ApprovalPanel({
+  request,
+  verdict,
+  onDecide,
+  onTicketed,
+}: {
+  request: ApprovalRequest;
+  verdict: ManagerVerdict | null;
+  onDecide: (verdict: ManagerVerdict) => void;
+  onTicketed: () => void;
+}) {
+  const facts = [
+    request.traveller,
+    request.route,
+    request.date,
+    request.flight,
+    request.fare !== null ? inr(request.fare) : "",
+    request.costCentre ? `Cost centre ${request.costCentre}` : "",
+  ].filter(Boolean);
+
+  return (
+    <div className={`gm-approval${verdict ? ` ${verdict}` : ""}`}>
+      <p className="gm-approval-title">
+        <Icon name="done" /> {verdict === "approved" ? "Manager approved" : "Waiting for the reporting manager"}
+      </p>
+      <p className="gm-approval-facts">{facts.join(" · ")}</p>
+      <p className="gm-approval-reason">{request.reason}</p>
+      {verdict === "approved" ? (
+        <div className="gm-approval-actions">
+          <span>
+            <strong>Your action:</strong> Ticket this on TravelOne with the prepared payload.
+          </span>
+          <button type="button" className="gm-text-button" onClick={onTicketed}>
+            Mark as ticketed
+          </button>
+        </div>
+      ) : (
+        <div className="gm-approval-actions">
+          <span>The payload is held. Nothing is released to TravelOne until the manager approves.</span>
+          <button type="button" className="gm-send" onClick={() => onDecide("approved")}>
+            Approve
+          </button>
+          <button type="button" className="gm-text-button" onClick={() => onDecide("rejected")}>
+            Reject
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -266,7 +447,36 @@ function CollapsedMessage({ item, onOpen }: { item: InboxItem; onOpen: (id: stri
   );
 }
 
-function DraftReply({ to, text, canSend, onSend }: { to: string; text: string; canSend: boolean; onSend: () => void }) {
+function SentCard({ to, sent }: { to: string; sent: SentReply }) {
+  return (
+    <section className="gm-draft sent" aria-label="Reply sent by Anika">
+      <div className="gm-draft-head">
+        <Icon name="reply" />
+        <span className="gm-draft-tag sent">Sent</span>
+        <span className="gm-draft-to">{senderName(to)}</span>
+        <span className="gm-draft-by">
+          <Icon name="sparkle" /> Sent automatically by Anika · <time dateTime={sent.sentAt}>{fullTime(sent.sentAt)}</time>
+        </span>
+      </div>
+      {sent.subject ? <p className="gm-draft-subject">{sent.subject}</p> : null}
+      <div className="gm-message-text sent-body">{sent.body}</div>
+    </section>
+  );
+}
+
+function DraftReply({
+  to,
+  subject,
+  text,
+  canSend,
+  onSend,
+}: {
+  to: string;
+  subject: string | null;
+  text: string;
+  canSend: boolean;
+  onSend: () => void;
+}) {
   const [body, setBody] = useState(text);
   const [copied, setCopied] = useState(false);
 
@@ -291,6 +501,7 @@ function DraftReply({ to, text, canSend, onSend }: { to: string; text: string; c
           <Icon name="sparkle" /> Drafted by Anika
         </span>
       </div>
+      {subject ? <p className="gm-draft-subject">{subject}</p> : null}
       <textarea
         className="gm-draft-text"
         value={body}
