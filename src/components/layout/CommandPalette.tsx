@@ -14,8 +14,7 @@ const ITEMS: PaletteItem[] = [
   { href: "/home", title: "Suite Home", hint: "Command Center" },
   { href: "/agents", title: "Digital workers", hint: "Automation · voice and worker agents" },
   { href: "/workflows", title: "Workflows", hint: "Automation · triggers, agents, approvals" },
-  { href: "/roi", title: "Suite ROI", hint: "Automation · what the whole suite is worth to your business" },
-  { href: "/roi/forex", title: "Forex calling ROI", hint: "Automation · detailed forex calling agent model" },
+  { href: "/roi", title: "Suite ROI", hint: "Automation · ROI calculator by division" },
   ...PROCESSES.flatMap((processModule) => {
     const base = `/${processModule.id}`;
     return [

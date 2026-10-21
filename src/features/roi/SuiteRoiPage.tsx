@@ -1,626 +1,795 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { DEFAULTS as FOREX_DEFAULTS, formatStep, inr, pct, SOURCE_LABELS, times, type RoiValues, type Step } from "../../data/roi-model";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
+  applySize,
+  beforeAfter,
   computeSuite,
-  formatSuiteInput,
-  inputById,
-  MODULES,
-  SHARED_INPUTS,
-  SUITE_DEFAULTS,
-  SUITE_INPUTS,
+  DEFAULTS,
+  DIVISION_COLORS,
+  formatLever,
+  formatStep,
+  inr,
+  leverById,
+  num,
+  SHARED,
+  SIZE_PRESETS,
+  SOURCE_LABELS,
+  SUITE,
+  times,
+  yearCurve,
+  type BeforeAfter,
   type Driver,
-  type ModuleResult,
-  type SuiteInput,
+  type DivisionResult,
+  type Lever,
   type SuiteResult,
   type SuiteValues,
+  type YearPoint,
 } from "../../data/suite-roi";
 
-const SUITE_KEY = "vts.roi.suite.v1";
-const FOREX_KEY = "vts.roi.forex.v1";
-
-type TabId = "overview" | "modules" | "why" | "assumptions";
-const TABS: { id: TabId; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "modules", label: "By module" },
-  { id: "why", label: "Why a suite" },
-  { id: "assumptions", label: "Assumptions" },
-];
+const KEY = "vts.roi.calc.v1";
 
 interface Saved {
   values: SuiteValues;
   enabled: Record<string, boolean>;
+  size?: string;
 }
 
-function readJson<T>(key: string): T | null {
-  try {
-    return JSON.parse(window.localStorage.getItem(key) ?? "null") as T | null;
-  } catch {
-    return null;
-  }
+/** Eases a number to its new value, so every change to the calculator lands with a visible jump. */
+function useCountUp(target: number, duration = 700): number {
+  const [shown, setShown] = useState(target);
+  const from = useRef(target);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(target);
+      from.current = target;
+      return;
+    }
+    const start = performance.now();
+    const origin = from.current;
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = origin + (target - origin) * eased;
+      setShown(value);
+      from.current = value;
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, duration]);
+  return shown;
 }
 
-/** Travel Suite ROI: every module's value, what the suite adds on top, and the return on the whole fee. */
+function Counter({ value, format = inr }: { value: number; format?: (value: number) => string }) {
+  return <>{format(useCountUp(value))}</>;
+}
+
+/** Travel Suite ROI calculator: size the business, pick the divisions, and watch what the agents earn. */
 export function SuiteRoiPage() {
-  const [values, setValues] = useState<SuiteValues>(SUITE_DEFAULTS);
+  const [values, setValues] = useState<SuiteValues>(DEFAULTS);
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
-  const [forex, setForex] = useState<RoiValues>(FOREX_DEFAULTS);
+  const [size, setSize] = useState<string>("established");
   const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState<TabId>("overview");
-  const [selected, setSelected] = useState<string>("planner");
-  const [focusId, setFocusId] = useState<string | null>(null);
-  const r = useMemo(() => computeSuite(values, enabled, forex), [values, enabled, forex]);
+  const [active, setActive] = useState<string>("international");
+  const r = useMemo(() => computeSuite(values, enabled), [values, enabled]);
+  const curve = useMemo(() => yearCurve(r), [r]);
+  const changes = useMemo(() => beforeAfter(values, r), [values, r]);
 
   useEffect(() => {
-    const saved = readJson<Saved>(SUITE_KEY);
-    if (saved) {
-      const clean: SuiteValues = { ...SUITE_DEFAULTS };
-      for (const key of Object.keys(SUITE_DEFAULTS)) if (Number.isFinite(saved.values?.[key])) clean[key] = saved.values[key];
-      setValues(clean);
-      setEnabled(saved.enabled ?? {});
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(KEY) ?? "null") as Saved | null;
+      if (saved) {
+        const clean: SuiteValues = { ...DEFAULTS };
+        for (const key of Object.keys(DEFAULTS)) if (Number.isFinite(saved.values?.[key])) clean[key] = saved.values[key];
+        setValues(clean);
+        setEnabled(saved.enabled ?? {});
+        if (saved.size) setSize(saved.size);
+      }
+    } catch {
+      // Defaults apply.
     }
-    const savedForex = readJson<RoiValues>(FOREX_KEY);
-    if (savedForex) setForex({ ...FOREX_DEFAULTS, ...savedForex });
     setLoaded(true);
   }, []);
 
   useEffect(() => {
     if (!loaded) return;
     try {
-      window.localStorage.setItem(SUITE_KEY, JSON.stringify({ values, enabled }));
+      window.localStorage.setItem(KEY, JSON.stringify({ values, enabled, size }));
     } catch {
       // Edits last for this visit only.
     }
-  }, [values, enabled, loaded]);
+  }, [values, enabled, size, loaded]);
 
-  useEffect(() => {
-    if (tab !== "assumptions" || !focusId) return;
-    const field = document.getElementById(`sr-f-${focusId}`);
-    field?.scrollIntoView({ block: "center" });
-    field?.focus();
-    setFocusId(null);
-  }, [tab, focusId]);
-
-  const go = (next: TabId, options?: { module?: string; field?: string }) => {
-    setTab(next);
-    if (options?.module) setSelected(options.module);
-    setFocusId(options?.field ?? null);
-    if (!options?.field) window.scrollTo({ top: 0, behavior: "smooth" });
+  const setValue = (id: string, value: number) => {
+    setValues((current) => ({ ...current, [id]: value }));
+    setSize("custom");
   };
-  const setValue = (id: string, value: number) => setValues((current) => ({ ...current, [id]: value }));
   const toggle = (id: string) => setEnabled((current) => ({ ...current, [id]: current[id] === false }));
-  const on = r.modules.filter((module) => module.enabled).length;
+  const pickSize = (id: string, factor: number) => {
+    setSize(id);
+    setValues((current) => applySize(current, factor));
+  };
+  const on = r.divisions.filter((item) => item.enabled);
+  const current = r.divisions.find((item) => item.division.id === active) ?? r.divisions[0];
+  const bookings = extraBookings(values, r);
+  const year = curve[curve.length - 1];
 
   return (
-    <main className="page roi-page">
-      <header className="page-header roi-header">
-        <div>
-          <p className="kicker">Automation · Travel Suite</p>
-          <h1>
-            Travel Suite <span className="gradient-text">ROI</span>
-          </h1>
-          <p className="lede">
-            What every agent in the suite is worth to your business each month, what the suite adds that separate tools cannot,
-            and the return on one fee.
-          </p>
+    <main className="page roi-page rx-page">
+      <section className="rx-hero" aria-label="What the suite earns you">
+        <div className="rx-hero-glow" aria-hidden="true" />
+        <div className="rx-hero-top">
+          <p className="rx-kicker">Travel Suite · ROI calculator</p>
+          <div className="rx-hero-tools">
+            <button type="button" className="rx-ghost" onClick={() => downloadCsv(r, values)}>
+              Export to Excel
+            </button>
+            <button
+              type="button"
+              className="rx-ghost"
+              onClick={() => {
+                setValues({ ...DEFAULTS });
+                setEnabled({});
+                setSize("established");
+              }}
+            >
+              Reset
+            </button>
+          </div>
         </div>
-        <div className="roi-header-tools">
-          <Link className="roi-export" href="/roi/forex">
-            Forex calling model
-          </Link>
-          <button className="roi-export" type="button" onClick={() => downloadCsv(r, values)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />
-            </svg>
-            Export to Excel
-          </button>
-        </div>
-      </header>
 
-      <section className="card roi-hero" aria-label="Headline value" aria-live="polite">
-        <div className="roi-hero-main">
-          <p className="kicker">Net value per month</p>
-          <strong className={r.net < 0 ? "roi-hero-num neg" : "roi-hero-num gradient-text"}>{inr(r.net)}</strong>
-          <p className="roi-hero-sub">
-            {inr(r.net * 12)} a year after the fee · the fee is earned back in {Math.max(Math.round(r.payback), 1)} days each month
-          </p>
+        <div className="rx-hero-main">
+          <div>
+            <h1>
+              Your AI agents earn you
+              <span className="rx-big">
+                <Counter value={r.net * 12} />
+              </span>
+              <span className="rx-big-sub">more every year, after the Vibrium fee.</span>
+            </h1>
+            <div className="rx-badges">
+              <span className="rx-badge hot">
+                <b>
+                  <Counter value={r.roi ?? 0} format={(value) => `${value.toFixed(1)}×`} />
+                </b>
+                return on every rupee
+              </span>
+              <span className="rx-badge">
+                <b>
+                  <Counter value={r.net} />
+                </b>
+                net every month
+              </span>
+              <span className="rx-badge">
+                <b>{Math.max(Math.round(r.paybackDays), 1)} days</b>
+                to earn back the monthly fee
+              </span>
+            </div>
+          </div>
+
+          <div className="rx-sizer">
+            <p className="rx-sizer-title">Size your business</p>
+            <div className="rx-sizes" role="radiogroup" aria-label="Business size">
+              {SIZE_PRESETS.map((preset) => (
+                <button key={preset.id} type="button" role="radio" aria-checked={size === preset.id} onClick={() => pickSize(preset.id, preset.factor)}>
+                  <strong>{preset.label}</strong>
+                  <small>{preset.detail}</small>
+                </button>
+              ))}
+            </div>
+            <p className="rx-sizer-title">Pick your divisions</p>
+            <div className="rx-chips">
+              {r.divisions.map((item) => (
+                <button
+                  key={item.division.id}
+                  type="button"
+                  aria-pressed={item.enabled}
+                  className="rx-chip"
+                  style={{ "--c": DIVISION_COLORS[item.division.id] } as CSSProperties}
+                  onClick={() => toggle(item.division.id)}
+                >
+                  <i aria-hidden="true" />
+                  {item.division.short}
+                </button>
+              ))}
+            </div>
+            {size === "custom" ? <p className="rx-sizer-note">Using your own volumes from the calculator below.</p> : null}
+          </div>
         </div>
-        <dl className="roi-hero-stats">
+
+        <dl className="rx-stats">
+          <div>
+            <dt>Extra bookings and orders</dt>
+            <dd>
+              <Counter value={bookings} format={(value) => num(value)} />
+            </dd>
+            <small>every month</small>
+          </div>
+          <div>
+            <dt>Hours given back to your team</dt>
+            <dd>
+              <Counter value={r.hoursSaved} format={(value) => num(value)} />
+            </dd>
+            <small>≈ {num(r.hoursSaved / Math.max(values["shared.deskHours"], 1))} people a month</small>
+          </div>
           <div>
             <dt>Value delivered</dt>
-            <dd>{inr(r.value)}</dd>
-            <small>per month</small>
-          </div>
-          <div>
-            <dt>Suite fee</dt>
-            <dd>{inr(r.fee)}</dd>
-            <small>{r.discount > 0 ? `${inr(r.discount)} bundle saving` : "per month"}</small>
-          </div>
-          <div>
-            <dt>Return on fee</dt>
-            <dd>{times(r.roi)}</dd>
-            <small>value ÷ fee</small>
-          </div>
-          <div>
-            <dt>Modules on</dt>
             <dd>
-              {on} of {MODULES.length}
+              <Counter value={r.value} />
             </dd>
-            <small>switch any off below</small>
+            <small>per month, {on.length} divisions</small>
+          </div>
+          <div>
+            <dt>Your fee</dt>
+            <dd>
+              <Counter value={r.fee} />
+            </dd>
+            <small>{r.discount > 0 ? `${inr(r.discount)} bundle saving` : "per month"}</small>
           </div>
         </dl>
       </section>
 
-      <div className="roi-tabs" role="tablist" aria-label="Suite ROI sections">
-        {TABS.map((item) => (
-          <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => go(item.id)}>
-            {item.label}
-          </button>
-        ))}
+      <section className="card rx-card">
+        <header className="rx-card-head">
+          <div>
+            <p className="rx-overline">Your first year</p>
+            <h2>
+              {inr(year?.earned ?? 0)} earned against {inr(year?.paid ?? 0)} paid
+            </h2>
+            <p>Value builds as the agents go live in the first three months, then the gap keeps widening every month.</p>
+          </div>
+          <span className="rx-multiple">{times(year && year.paid ? year.earned / year.paid : null)}</span>
+        </header>
+        <YearChart points={curve} />
+      </section>
+
+      <div className="rx-grid">
+        <section className="card rx-card">
+          <header className="rx-card-head">
+            <div>
+              <p className="rx-overline">Where the money comes from</p>
+              <h2>{inr(r.value)} a month</h2>
+            </div>
+          </header>
+          <Donut r={r} onPick={(id) => setActive(id)} />
+        </section>
+
+        <section className="card rx-card">
+          <header className="rx-card-head">
+            <div>
+              <p className="rx-overline">What changes on the floor</p>
+              <h2>Today vs with the agents</h2>
+            </div>
+          </header>
+          <BeforeAfterBars rows={changes} />
+        </section>
       </div>
 
-      {tab === "overview" ? <Overview r={r} toggle={toggle} go={go} /> : null}
-      {tab === "modules" ? <ByModule r={r} selected={selected} setSelected={setSelected} values={values} go={go} /> : null}
-      {tab === "why" ? <WhySuite r={r} /> : null}
-      {tab === "assumptions" ? (
-        <Assumptions values={values} setValue={setValue} reset={() => setValues({ ...SUITE_DEFAULTS })} />
-      ) : null}
+      <section className="rx-calc" aria-label="Calculator by division">
+        <header className="rx-calc-head">
+          <div>
+            <p className="rx-overline">Calculator</p>
+            <h2>Put in your numbers, see what happens</h2>
+            <p>Pick a division, drag the volumes, and follow each one from what comes in to what it earns.</p>
+          </div>
+        </header>
+        <div className="rx-tabs" role="tablist" aria-label="Divisions">
+          {r.divisions.map((item) => (
+            <button
+              key={item.division.id}
+              type="button"
+              role="tab"
+              aria-selected={active === item.division.id}
+              className={item.enabled ? undefined : "off"}
+              style={{ "--c": DIVISION_COLORS[item.division.id] } as CSSProperties}
+              onClick={() => setActive(item.division.id)}
+            >
+              <i aria-hidden="true" />
+              <span>
+                {item.division.name}
+                <small>{item.enabled ? inr(item.value) : "Not in the plan"}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+        <DivisionPanel key={current.division.id} item={current} values={values} setValue={setValue} toggle={() => toggle(current.division.id)} />
+      </section>
+
+      <details className="card roi-panel rc-finetune">
+        <summary>
+          <span>
+            <strong>Fine-tune the suite</strong>
+            <small>Desk cost per hour, cross-sell on holidays, and the bundle discount</small>
+          </span>
+        </summary>
+        <div className="rc-finetune-body">
+          {[...SHARED.map((lever) => ({ lever, id: `shared.${lever.id}` })), ...SUITE.map((lever) => ({ lever, id: `suite.${lever.id}` }))].map(({ lever, id }) => (
+            <RateRow key={id} id={id} lever={lever} value={values[id]} onChange={(value) => setValue(id, value)} />
+          ))}
+        </div>
+      </details>
     </main>
   );
 }
 
-type Go = (tab: TabId, options?: { module?: string; field?: string }) => void;
+function extraBookings(values: SuiteValues, r: SuiteResult): number {
+  const get = (id: string) => values[id] ?? DEFAULTS[id] ?? 0;
+  const isOn = (id: string) => r.divisions.some((item) => item.division.id === id && item.enabled);
+  let total = 0;
+  if (isOn("forex")) total += Math.max(get("forex.leads") * get("forex.connect") * get("forex.succ") - get("forex.leads") * get("forex.cov") * get("forex.base"), 0);
+  if (isOn("international"))
+    total += get("international.visitors") * get("international.open") * get("international.chat") * get("international.lead") * get("international.book") * get("international.incremental");
+  if (isOn("corporate")) total += get("corporate.bookings") * get("corporate.won");
+  if (isOn("domestic")) total += get("domestic.travellers") * get("domestic.rebook");
+  if (isOn("qc")) total += get("qc.calls") * get("qc.uplift");
+  return total;
+}
 
-function Overview({ r, toggle, go }: { r: SuiteResult; toggle: (id: string) => void; go: Go }) {
-  const on = r.modules.filter((module) => module.enabled);
-  const max = Math.max(...on.map((module) => module.value), r.suiteValue, 1);
-  const moduleTotal = on.reduce((sum, module) => sum + module.value, 0);
-  const growth = [...on.flatMap((module) => module.drivers), ...r.suiteDrivers].filter((driver) => driver.kind !== "cost").reduce((sum, driver) => sum + driver.value, 0);
+/* ───────── charts ───────── */
+
+const W = 760;
+const H = 280;
+const PAD = { top: 20, right: 120, bottom: 34, left: 64 };
+
+/** Rounds a tick interval up to 1, 2, 2.5, or 5 times a power of ten. */
+function niceStep(rough: number): number {
+  const power = Math.pow(10, Math.floor(Math.log10(Math.max(rough, 1))));
+  const scaled = rough / power;
+  const nice = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
+  return nice * power;
+}
+
+function YearChart({ points }: { points: YearPoint[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const raw = Math.max(...points.map((point) => point.earned), 1);
+  const step = niceStep(raw / 4);
+  const max = Math.ceil(raw / step) * step;
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const x = (month: number) => PAD.left + ((month - 1) / 11) * innerW;
+  const y = (value: number) => PAD.top + innerH - (value / max) * innerH;
+  const earnedPath = points.map((point, index) => `${index ? "L" : "M"}${x(point.month)},${y(point.earned)}`).join(" ");
+  const area = `${earnedPath} L${x(12)},${y(0)} L${x(1)},${y(0)} Z`;
+  const paidPath = points.map((point, index) => `${index ? "L" : "M"}${x(point.month)},${y(point.paid)}`).join(" ");
+  const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step);
+  const last = points[points.length - 1];
+  const point = hover !== null ? points[hover] : null;
 
   return (
-    <div className="roi-overview">
-      <div className="roi-overview-grid">
-        <section className="card roi-panel">
-          <header className="roi-panel-head">
-            <h2>Monthly value by module</h2>
-            <p>Each bar is what the module's agents earn or save in a month. Select one to see the working.</p>
-          </header>
-          <div className="roi-bars">
-            {on.map((module) => (
-              <div className="roi-bar sr-bar" key={module.module.id}>
-                <button type="button" className="roi-bar-label" onClick={() => go("modules", { module: module.module.id })}>
-                  {module.module.name}
-                </button>
-                <div className="roi-track">
-                  <i className="fill cost" style={{ left: 0, width: `${(Math.max(module.value, 0) / max) * 100}%` }} />
-                </div>
-                <span className="roi-amt">{inr(module.value)}</span>
-                <span className="sr-roi">{times(module.roi)}</span>
-              </div>
-            ))}
-            {r.suiteDrivers.length > 0 ? (
-              <>
-                <hr />
-                <div className="roi-bar sr-bar">
-                  <button type="button" className="roi-bar-label" onClick={() => go("modules", { module: "suite" })}>
-                    Suite effects
-                  </button>
-                  <div className="roi-track">
-                    <i className="fill growth" style={{ left: 0, width: `${(r.suiteValue / max) * 100}%` }} />
-                  </div>
-                  <span className="roi-amt">{inr(r.suiteValue)}</span>
-                  <span className="sr-roi">only in a suite</span>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </section>
+    <div className="rx-chart">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`First year: ${inr(last.earned)} earned, ${inr(last.paid)} paid`} onMouseLeave={() => setHover(null)}>
+        <defs>
+          <linearGradient id="rxArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#2c70f6" stopOpacity="0.45" />
+            <stop offset="1" stopColor="#00ccc5" stopOpacity="0.04" />
+          </linearGradient>
+          <linearGradient id="rxLine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#2c70f6" />
+            <stop offset="1" stopColor="#00ccc5" />
+          </linearGradient>
+        </defs>
+        {ticks.map((tick) => (
+          <g key={tick}>
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} className="rx-grid-line" />
+            <text x={PAD.left - 10} y={y(tick) + 4} textAnchor="end" className="rx-axis">
+              {inr(tick)}
+            </text>
+          </g>
+        ))}
+        {points.map((item) => (
+          <text key={item.month} x={x(item.month)} y={H - 10} textAnchor="middle" className="rx-axis">
+            M{item.month}
+          </text>
+        ))}
+        <path d={area} fill="url(#rxArea)" className="rx-area" />
+        <path d={earnedPath} fill="none" stroke="url(#rxLine)" strokeWidth="3" strokeLinejoin="round" className="rx-line" pathLength={1} />
+        <path d={paidPath} fill="none" stroke="#9aa9b1" strokeWidth="2" strokeDasharray="5 5" />
+        <circle cx={x(12)} cy={y(last.earned)} r="5" fill="#00ccc5" stroke="#fff" strokeWidth="2" />
+        <circle cx={x(12)} cy={y(last.paid)} r="4" fill="#9aa9b1" stroke="#fff" strokeWidth="2" />
+        <text x={x(12) + 12} y={y(last.earned) + 4} className="rx-end-label strong">
+          Earned {inr(last.earned)}
+        </text>
+        <text x={x(12) + 12} y={y(last.paid) + 4} className="rx-end-label">
+          Fee {inr(last.paid)}
+        </text>
+        {point ? (
+          <g>
+            <line x1={x(point.month)} x2={x(point.month)} y1={PAD.top} y2={PAD.top + innerH} className="rx-cross" />
+            <circle cx={x(point.month)} cy={y(point.earned)} r="5" fill="#2c70f6" stroke="#fff" strokeWidth="2" />
+            <circle cx={x(point.month)} cy={y(point.paid)} r="4" fill="#9aa9b1" stroke="#fff" strokeWidth="2" />
+          </g>
+        ) : null}
+        {points.map((item, index) => (
+          <rect
+            key={item.month}
+            x={x(item.month) - innerW / 22}
+            y={PAD.top}
+            width={innerW / 11}
+            height={innerH}
+            fill="transparent"
+            onMouseEnter={() => setHover(index)}
+          />
+        ))}
+      </svg>
+      {point ? (
+        <div className="rx-tip" style={{ left: `${(x(point.month) / W) * 100}%` }}>
+          <strong>Month {point.month}</strong>
+          <span>
+            <i className="earned" /> Earned {inr(point.earned)}
+          </span>
+          <span>
+            <i className="paid" /> Fee paid {inr(point.paid)}
+          </span>
+          <b>Ahead by {inr(point.earned - point.paid)}</b>
+        </div>
+      ) : null}
+      <div className="rx-legend">
+        <span>
+          <i className="earned" /> Value earned, cumulative
+        </span>
+        <span>
+          <i className="paid" /> Vibrium fee, cumulative
+        </span>
+      </div>
+    </div>
+  );
+}
 
-        <section className="card roi-panel">
-          <header className="roi-panel-head">
-            <h2>How it adds up</h2>
-          </header>
-          <table className="roi-plain">
-            <tbody>
-              <tr><td>Value from {on.length} modules</td><td className="r">{inr(moduleTotal)}</td></tr>
-              <tr><td>Suite effects</td><td className="r">{inr(r.suiteValue)}</td></tr>
-              <tr><td>Fees at list price</td><td className="r neg">{inr(-r.feeList)}</td></tr>
-              {r.discount > 0 ? <tr><td>Bundle discount</td><td className="r">{inr(r.discount)}</td></tr> : null}
-              <tr className="total"><td>Net value per month</td><td className={r.net < 0 ? "r neg" : "r"}>{inr(r.net)}</td></tr>
-            </tbody>
-          </table>
-          <p className="roi-text">
-            {pct(r.value ? growth / r.value : 0, 0)} of the value is new revenue, not just cost saved.
-            {on.every((module) => (module.roi ?? 0) > 1) ? " Every module on its own returns more than its fee." : ""}
+function Donut({ r, onPick }: { r: SuiteResult; onPick: (id: string) => void }) {
+  const [hover, setHover] = useState<string | null>(null);
+  const slices = [
+    ...r.divisions.filter((item) => item.enabled && item.value > 0).map((item) => ({ id: item.division.id, name: item.division.short, value: item.value, color: DIVISION_COLORS[item.division.id] })),
+    ...(r.suiteValue > 0 ? [{ id: "suite", name: "Suite cross-sell", value: r.suiteValue, color: "#7b8a93" }] : []),
+  ];
+  const total = slices.reduce((sum, slice) => sum + slice.value, 0) || 1;
+  const radius = 80;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+  const focus = slices.find((slice) => slice.id === hover);
+
+  return (
+    <div className="rx-donut">
+      <svg viewBox="0 0 220 220" role="img" aria-label="Monthly value by division">
+        <g transform="rotate(-90 110 110)">
+          {slices.map((slice) => {
+            const length = (slice.value / total) * circumference;
+            const gap = slices.length > 1 ? 3 : 0;
+            const dash = `${Math.max(length - gap, 0.5)} ${circumference}`;
+            const element = (
+              <circle
+                key={slice.id}
+                cx="110"
+                cy="110"
+                r={radius}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth={hover === slice.id ? 30 : 24}
+                strokeDasharray={dash}
+                strokeDashoffset={-offset}
+                className="rx-slice"
+                onMouseEnter={() => setHover(slice.id)}
+                onMouseLeave={() => setHover(null)}
+                onClick={() => slice.id !== "suite" && onPick(slice.id)}
+              />
+            );
+            offset += length;
+            return element;
+          })}
+        </g>
+        <text x="110" y="104" textAnchor="middle" className="rx-donut-label">
+          {focus ? focus.name : "Every month"}
+        </text>
+        <text x="110" y="128" textAnchor="middle" className="rx-donut-value">
+          {inr(focus ? focus.value : total)}
+        </text>
+      </svg>
+      <ul className="rx-donut-legend">
+        {slices.map((slice) => (
+          <li key={slice.id} onMouseEnter={() => setHover(slice.id)} onMouseLeave={() => setHover(null)} className={hover === slice.id ? "on" : undefined}>
+            <i style={{ background: slice.color }} />
+            <span>{slice.name}</span>
+            <b>{inr(slice.value)}</b>
+            <small>{Math.round((slice.value / total) * 100)}%</small>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function BeforeAfterBars({ rows }: { rows: BeforeAfter[] }) {
+  if (rows.length === 0) return <p className="rx-empty">Turn on Forex, Corporate, Domestic, or Call QC to compare today with the agents.</p>;
+  return (
+    <ul className="rx-ba">
+      {rows.map((row) => {
+        const max = Math.max(row.today, row.after, 1);
+        const lift = row.today > 0 ? row.after / row.today : null;
+        return (
+          <li key={row.label}>
+            <div className="rx-ba-head">
+              <strong>{row.label}</strong>
+              <span className="rx-lift">{lift ? `${lift.toFixed(1)}×` : "new"}</span>
+            </div>
+            <div className="rx-ba-row">
+              <small>Today</small>
+              <span className="rx-ba-track">
+                <i className="today" style={{ width: `${Math.max((row.today / max) * 100, row.today ? 1.5 : 0)}%` }} />
+              </span>
+              <b>{num(row.today)}</b>
+            </div>
+            <div className="rx-ba-row">
+              <small>With agents</small>
+              <span className="rx-ba-track">
+                <i className="after" style={{ width: `${(row.after / max) * 100}%` }} />
+              </span>
+              <b>{num(row.after)}</b>
+            </div>
+            <p>{row.note}</p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/* ───────── division calculator ───────── */
+
+function DivisionPanel({
+  item,
+  values,
+  setValue,
+  toggle,
+}: {
+  item: DivisionResult;
+  values: SuiteValues;
+  setValue: (id: string, value: number) => void;
+  toggle: () => void;
+}) {
+  const { division } = item;
+  const color = DIVISION_COLORS[division.id];
+  return (
+    <div className="card rx-panel" style={{ "--c": color } as CSSProperties}>
+      <header className="rc-division-head">
+        <div>
+          <h3>{division.name}</h3>
+          <p>{division.pitch}</p>
+          <p className="sr-agents">
+            Agents: {division.agents} ·{" "}
+            <Link href={division.href} className="roi-link">
+              Open the division
+            </Link>
           </p>
-        </section>
+        </div>
+        <IncludeSwitch on={item.enabled} label={`Include ${division.name}`} onToggle={toggle} />
+      </header>
+
+      <div className="rx-panel-grid">
+        <div className="rc-volumes">
+          {division.volumes.map((lever) => {
+            const id = `${division.id}.${lever.id}`;
+            return <VolumeSlider key={id} id={id} lever={lever} value={values[id]} onChange={(value) => setValue(id, value)} />;
+          })}
+        </div>
+        <div className="rx-result">
+          <span>This division earns you</span>
+          <strong>
+            <Counter value={item.net} />
+          </strong>
+          <small>
+            net a month · {times(item.roi)} its fee of {inr(item.fee)}
+          </small>
+        </div>
       </div>
 
-      <section>
-        <h3 className="roi-h3 roi-h3-gap">Modules in your plan</h3>
-        <div className="sr-modules">
-          {r.modules.map((module) => (
-            <article key={module.module.id} className={`card sr-module${module.enabled ? "" : " off"}`}>
-              <header>
-                <div>
-                  <h3>{module.module.name}</h3>
-                  <p>{module.module.pitch}</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  className="pl-switch"
-                  aria-checked={module.enabled}
-                  aria-label={`Include ${module.module.name}`}
-                  onClick={() => toggle(module.module.id)}
-                >
-                  <i aria-hidden="true" />
-                </button>
-              </header>
-              <dl>
-                <div>
-                  <dt>Value</dt>
-                  <dd>{inr(module.value)}</dd>
-                </div>
-                <div>
-                  <dt>Fee</dt>
-                  <dd>{inr(module.fee)}</dd>
-                </div>
-                <div>
-                  <dt>Return</dt>
-                  <dd className="sr-return">{times(module.roi)}</dd>
-                </div>
-              </dl>
-              <button type="button" className="roi-link" onClick={() => go("modules", { module: module.module.id })}>
-                See the working
-              </button>
-            </article>
-          ))}
+      <ol className="rc-flow">
+        {item.flow.map((step) => (
+          <li key={step.label} className={step.money ? "money" : undefined}>
+            <small>{step.label}</small>
+            <strong>{step.value}</strong>
+            <span>{step.detail}</span>
+          </li>
+        ))}
+      </ol>
+
+      <div className="rx-drivers">
+        {item.drivers.map((driver) => (
+          <DriverCard key={driver.id} driver={driver} />
+        ))}
+      </div>
+
+      <details className="rc-finetune rx-inner">
+        <summary>
+          <span>
+            <strong>Fine-tune the rates</strong>
+            <small>Conversion, minutes saved, margins, and the fee for {division.name.toLowerCase()}</small>
+          </span>
+        </summary>
+        <div className="rc-finetune-body">
+          {division.rates.map((lever) => {
+            const id = `${division.id}.${lever.id}`;
+            return <RateRow key={id} id={id} lever={lever} value={values[id]} onChange={(value) => setValue(id, value)} />;
+          })}
         </div>
-      </section>
+      </details>
     </div>
   );
 }
 
-function StepsTable({ steps }: { steps: Step[] }) {
+/* ───────── inputs ───────── */
+
+function shownValue(lever: Lever, value: number): number {
+  return lever.unit === "pct" ? Number((value * 100).toFixed(4)) : value;
+}
+
+function parseInput(lever: Lever, raw: string): number | null {
+  const parsed = parseFloat(raw);
+  if (!Number.isFinite(parsed)) return null;
+  return lever.unit === "pct" ? parsed / 100 : parsed;
+}
+
+const SUFFIX: Record<string, string> = { pct: "%", min: "min", hrs: "h" };
+
+function VolumeSlider({ id, lever, value, onChange }: { id: string; lever: Lever; value: number; onChange: (value: number) => void }) {
+  const min = lever.min ?? 0;
+  const max = Math.max(lever.max ?? value * 2, value);
+  const fill = ((value - min) / Math.max(max - min, 1)) * 100;
   return (
-    <div className="table-wrap">
-      <table className="roi-steps">
-        <thead>
-          <tr>
-            <th>Step</th>
-            <th>Working</th>
-            <th className="r">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {steps.map((step, index) => (
-            <tr key={step.label} className={index === steps.length - 1 ? "total" : undefined}>
-              <td>{step.label}</td>
-              <td className="work">{step.work}</td>
-              <td className={step.value < 0 ? "r neg" : "r"}>{formatStep(step.value, step.format)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="rc-volume">
+      <div className="rc-volume-head">
+        <label htmlFor={`rc-${id}`}>{lever.label}</label>
+        <span className="roi-field rc-volume-field">
+          {lever.unit === "inr" ? <span>₹</span> : null}
+          <input
+            id={`rc-${id}`}
+            type="number"
+            inputMode="numeric"
+            value={value}
+            min={0}
+            step={lever.step ?? 1}
+            onChange={(event) => {
+              const parsed = parseInput(lever, event.target.value);
+              if (parsed !== null && parsed >= 0) onChange(parsed);
+            }}
+          />
+        </span>
+      </div>
+      <input
+        className="rc-range"
+        type="range"
+        min={min}
+        max={max}
+        step={lever.step ?? 1}
+        value={value}
+        aria-label={lever.label}
+        style={{ "--fill": `${fill}%` } as CSSProperties}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+      <div className="rc-volume-foot">
+        <small>{lever.note}</small>
+        <small>
+          {formatLever(lever, min)} – {formatLever(lever, max)}
+        </small>
+      </div>
     </div>
   );
 }
+
+function RateRow({ id, lever, value, onChange }: { id: string; lever: Lever; value: number; onChange: (value: number) => void }) {
+  const edited = value !== lever.value;
+  return (
+    <div className={`roi-irow${lever.source === "est" ? " est" : ""}${edited ? " edited" : ""}`}>
+      <div className="roi-ilabel">
+        <label htmlFor={`rc-${id}`}>{lever.label}</label>
+        <p>{lever.note}</p>
+        <div className="roi-imeta">
+          <span className={`roi-tag ${lever.source}`}>
+            <i aria-hidden="true" />
+            {SOURCE_LABELS[lever.source]}
+          </span>
+          {edited ? (
+            <button type="button" className="roi-link" onClick={() => onChange(lever.value)}>
+              Reset to {formatLever(lever, lever.value)}
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <span className="roi-field">
+        {lever.unit === "inr" ? <span>₹</span> : null}
+        <input
+          id={`rc-${id}`}
+          type="number"
+          inputMode="decimal"
+          step={lever.unit === "pct" ? "0.1" : lever.unit === "inr" ? "100" : "1"}
+          value={shownValue(lever, value)}
+          onChange={(event) => {
+            const parsed = parseInput(lever, event.target.value);
+            if (parsed !== null) onChange(parsed);
+          }}
+        />
+        {SUFFIX[lever.unit] ? <span>{SUFFIX[lever.unit]}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+function IncludeSwitch({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) {
+  return (
+    <label className="rc-include">
+      <span>{on ? "In the plan" : "Not in the plan"}</span>
+      <button type="button" role="switch" className="pl-switch" aria-checked={on} aria-label={label} onClick={onToggle}>
+        <i aria-hidden="true" />
+      </button>
+    </label>
+  );
+}
+
 
 function DriverCard({ driver }: { driver: Driver }) {
   return (
-    <section className="card roi-panel">
-      <header className="roi-panel-head sr-driver-head">
-        <div>
-          <h2>{driver.name}</h2>
-          <p>{driver.what}</p>
-        </div>
-        <strong className={driver.value < 0 ? "neg" : undefined}>{inr(driver.value)}</strong>
-      </header>
-      <StepsTable steps={driver.steps} />
-    </section>
-  );
-}
-
-function ByModule({
-  r,
-  selected,
-  setSelected,
-  values,
-  go,
-}: {
-  r: SuiteResult;
-  selected: string;
-  setSelected: (id: string) => void;
-  values: SuiteValues;
-  go: Go;
-}) {
-  const current: ModuleResult | null = r.modules.find((module) => module.module.id === selected) ?? null;
-
-  return (
-    <div className="roi-drivers">
-      <nav className="roi-driver-list" aria-label="Modules">
-        {r.modules.map((module) => (
-          <button key={module.module.id} type="button" aria-current={selected === module.module.id ? "true" : undefined} onClick={() => setSelected(module.module.id)}>
-            <i className={`roi-dot ${module.enabled ? "cost" : "unit"}`} aria-hidden="true" />
-            <span>
-              {module.module.name}
-              <small>{module.enabled ? `${times(module.roi)} return` : "Not in the plan"}</small>
-            </span>
-            <b>{inr(module.value)}</b>
-          </button>
-        ))}
-        <button type="button" aria-current={selected === "suite" ? "true" : undefined} onClick={() => setSelected("suite")}>
-          <i className="roi-dot growth" aria-hidden="true" />
-          <span>
-            Suite effects
-            <small>Only when modules share a lead</small>
-          </span>
-          <b>{inr(r.suiteValue)}</b>
-        </button>
-      </nav>
-
-      <div className="roi-driver-detail sr-detail">
-        {current ? (
-          <>
-            <header className="roi-section-head">
-              <h2>{current.module.name}</h2>
-              <p>{current.module.pitch}</p>
-              <p className="sr-agents">
-                Agents: {current.module.agents} ·{" "}
-                <Link href={current.module.href} className="roi-link">
-                  Open the module
-                </Link>
-              </p>
-            </header>
-            <div className="sr-module-sum">
-              <div>
-                <span>Value</span>
-                <strong>{inr(current.value)}</strong>
-              </div>
-              <div>
-                <span>Fee</span>
-                <strong>{inr(current.fee)}</strong>
-              </div>
-              <div>
-                <span>Net</span>
-                <strong>{inr(current.net)}</strong>
-              </div>
-              <div>
-                <span>Return</span>
-                <strong className="gradient-text">{times(current.roi)}</strong>
-              </div>
-            </div>
-            {current.drivers.map((driver) => (
-              <DriverCard key={driver.id} driver={driver} />
-            ))}
-            {current.module.id === "forex" ? (
-              <p className="roi-callout info">
-                Forex uses the detailed forex calling model, with its own 27 assumptions and sources.{" "}
-                <Link href="/roi/forex" className="roi-link">
-                  Open the forex model
-                </Link>
-              </p>
-            ) : (
-              <section>
-                <h3 className="roi-h3 roi-h3-gap">Inputs used</h3>
-                <div className="roi-used sr-used">
-                  {[...current.module.inputs.map((input) => `${current.module.id}.${input.id}`), "shared.deskCost"].map((id) => {
-                    const input = inputById(id) as SuiteInput;
-                    return (
-                      <button key={id} type="button" className="roi-chip" onClick={() => go("assumptions", { field: id })}>
-                        <i className={`roi-dot ${input.source}`} aria-hidden="true" />
-                        <span>{input.label}</span>
-                        <b>{formatSuiteInput(input, values[id])}</b>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-          </>
-        ) : (
-          <>
-            <header className="roi-section-head">
-              <h2>Suite effects</h2>
-              <p>
-                Value no single tool can create, because the planner, the quote desk, and the forex desk share one lead and one
-                traveller record.
-              </p>
-            </header>
-            {r.suiteDrivers.length > 0 ? (
-              r.suiteDrivers.map((driver) => <DriverCard key={driver.id} driver={driver} />)
-            ) : (
-              <p className="roi-callout">Turn on the Trip planner to see suite effects: it is where the holidays come from.</p>
-            )}
-            {r.discount > 0 ? (
-              <section className="card roi-panel">
-                <header className="roi-panel-head sr-driver-head">
-                  <div>
-                    <h2>Bundle discount</h2>
-                    <p>One platform and one contract for four or more modules.</p>
-                  </div>
-                  <strong>{inr(r.discount)}</strong>
-                </header>
-              </section>
-            ) : null}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const COMPARE: [string, string, string][] = [
-  ["The traveller", "Re-explains the trip to each tool and each desk", "Tells it once; every agent works from the same lead"],
-  ["A holiday booking", "Never reaches the forex or insurance desk", "Forex and insurance are offered on every holiday"],
-  ["Quality", "A 2% sample of calls, one channel at a time", "Every call, chat, and mail scored on your form"],
-  ["Your data", "Split across a chatbot, a dialer, a QA tool, and a PDF maker", "One record from first chat to branch handover"],
-  ["Cost", "Four contracts, four integrations, four logins", "One fee, one platform, one place to see results"],
-];
-
-function WhySuite({ r }: { r: SuiteResult }) {
-  const crossSell = r.suiteDrivers.reduce((sum, driver) => sum + driver.value, 0);
-  const points = [
-    { title: "One lead, every desk", value: "1 record", text: "A chat on your website becomes a quote, a forex order, a care call, and an audited conversation without anyone typing it twice." },
-    { title: "Sell more on every trip", value: inr(crossSell), text: "Forex and insurance offered on the holidays the planner books. A standalone tool never sees the holiday." },
-    { title: "One fee", value: inr(r.discount), text: "Bundle saving each month for four or more modules, on one contract." },
-    { title: "Every conversation audited", value: "100%", text: "Voice, chat, and email from every module scored by the same audit agents." },
-  ];
-  return (
-    <div className="roi-overview">
-      <header className="roi-section-head">
-        <h2>Why a suite beats separate tools</h2>
-        <p>The modules pay for themselves one by one. Together they share one lead, so each sells more than it could alone.</p>
-      </header>
-      <div className="sr-why">
-        {points.map((point) => (
-          <article key={point.title} className="card sr-why-card">
-            <strong>{point.value}</strong>
-            <h3>{point.title}</h3>
-            <p>{point.text}</p>
-          </article>
-        ))}
-      </div>
-      <section className="card roi-panel roi-flush">
-        <div className="table-wrap">
-          <table className="roi-kpi-table sr-compare">
-            <thead>
-              <tr>
-                <th />
-                <th>Separate tools</th>
-                <th>Vibrium Travel Suite</th>
+    <details className="card roi-panel rc-driver">
+      <summary>
+        <span className={`roi-dot ${driver.kind}`} aria-hidden="true" />
+        <span className="rc-driver-text">
+          <strong>{driver.name}</strong>
+          <small>{driver.what}</small>
+        </span>
+        <b className={driver.value < 0 ? "neg" : undefined}>{inr(driver.value)}</b>
+      </summary>
+      <div className="table-wrap">
+        <table className="roi-steps">
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Working</th>
+              <th className="r">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {driver.steps.map((step, index) => (
+              <tr key={step.label} className={index === driver.steps.length - 1 ? "total" : undefined}>
+                <td>{step.label}</td>
+                <td className="work">{step.work}</td>
+                <td className={step.value < 0 ? "r neg" : "r"}>{formatStep(step.value, step.format)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {COMPARE.map(([row, separate, suite]) => (
-                <tr key={row}>
-                  <td className="kpi-name">{row}</td>
-                  <td className="work">{separate}</td>
-                  <td className="sr-yes">{suite}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
 }
 
-function Assumptions({ values, setValue, reset }: { values: SuiteValues; setValue: (id: string, value: number) => void; reset: () => void }) {
-  const groups: { title: string; scope: string; inputs: SuiteInput[] }[] = [
-    { title: "Shared across modules", scope: "shared", inputs: SHARED_INPUTS },
-    ...MODULES.filter((module) => module.id !== "forex").map((module) => ({ title: module.name, scope: module.id, inputs: module.inputs })),
-    { title: "Suite effects", scope: "suite", inputs: SUITE_INPUTS },
-  ];
-  const edited = Object.keys(SUITE_DEFAULTS).filter((key) => values[key] !== SUITE_DEFAULTS[key]).length;
-  const suffix: Record<string, string> = { pct: "%", min: "min", hrs: "h" };
 
-  return (
-    <section className="roi-section">
-      <header className="roi-section-head">
-        <h2>Assumptions</h2>
-        <p>Starting points for every module. Change any of them and the whole suite reprices. Percentages are whole numbers.</p>
-      </header>
-      <div className="roi-assume-bar">
-        <div className="roi-legend">
-          {(["client", "ai", "bench", "vib", "est"] as const).map((source) => (
-            <span key={source} className={`roi-tag ${source}`}>
-              <i aria-hidden="true" />
-              {SOURCE_LABELS[source]}
-            </span>
-          ))}
-        </div>
-        <button type="button" className="roi-btn" onClick={reset} disabled={edited === 0}>
-          {edited === 0 ? "Using defaults" : `Reset ${edited} edited`}
-        </button>
-      </div>
-      <div className="card roi-panel roi-group">
-        <h3>Forex</h3>
-        <p className="roi-text">
-          Forex has its own detailed model with 27 assumptions.{" "}
-          <Link href="/roi/forex" className="roi-link">
-            Edit them in the forex model
-          </Link>
-        </p>
-      </div>
-      {groups.map((group) => (
-        <div className="card roi-panel roi-group" key={group.scope}>
-          <h3>{group.title}</h3>
-          {group.inputs.map((input) => {
-            const id = `${group.scope}.${input.id}`;
-            const value = values[id];
-            const shown = input.unit === "pct" ? Number((value * 100).toFixed(4)) : value;
-            const isEdited = value !== input.value;
-            return (
-              <div key={id} className={`roi-irow${input.source === "est" ? " est" : ""}${isEdited ? " edited" : ""}`}>
-                <div className="roi-ilabel">
-                  <label htmlFor={`sr-f-${id}`}>{input.label}</label>
-                  <p>{input.note}</p>
-                  <div className="roi-imeta">
-                    <span className={`roi-tag ${input.source}`}>
-                      <i aria-hidden="true" />
-                      {SOURCE_LABELS[input.source]}
-                    </span>
-                    {isEdited ? (
-                      <button type="button" className="roi-link" onClick={() => setValue(id, input.value)}>
-                        Reset to {formatSuiteInput(input, input.value)}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-                <span className="roi-field">
-                  {input.unit === "inr" ? <span>₹</span> : null}
-                  <input
-                    id={`sr-f-${id}`}
-                    type="number"
-                    inputMode="decimal"
-                    step={input.unit === "pct" ? "0.1" : input.unit === "inr" ? "500" : "1"}
-                    value={shown}
-                    onChange={(event) => {
-                      const parsed = parseFloat(event.target.value);
-                      if (Number.isFinite(parsed)) setValue(id, input.unit === "pct" ? parsed / 100 : parsed);
-                    }}
-                  />
-                  {suffix[input.unit] ? <span>{suffix[input.unit]}</span> : null}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </section>
-  );
-}
+/* ───────── export ───────── */
 
 function downloadCsv(r: SuiteResult, values: SuiteValues) {
   const cell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
   const rows: (string | number)[][] = [
-    ["Travel Suite ROI"],
+    ["Travel Suite ROI calculator"],
     [],
-    ["Module", "In plan", "Value per month (INR)", "Fee per month (INR)", "Net (INR)", "Return on fee"],
-    ...r.modules.map((module): (string | number)[] => [
-      module.module.name,
-      module.enabled ? "Yes" : "No",
-      Math.round(module.value),
-      Math.round(module.fee),
-      Math.round(module.net),
-      module.roi == null ? "" : module.roi.toFixed(2),
+    ["Division", "In plan", "Volume", "Value per month (INR)", "Fee per month (INR)", "Net (INR)", "Return on fee"],
+    ...r.divisions.map((item): (string | number)[] => [
+      item.division.name,
+      item.enabled ? "Yes" : "No",
+      item.headline,
+      Math.round(item.value),
+      Math.round(item.fee),
+      Math.round(item.net),
+      item.roi == null ? "" : item.roi.toFixed(2),
     ]),
-    ...r.suiteDrivers.map((driver): (string | number)[] => [`Suite effect: ${driver.name}`, "Yes", Math.round(driver.value), 0, Math.round(driver.value), ""]),
-    ["Bundle discount", "", "", -Math.round(r.discount), Math.round(r.discount), ""],
-    ["Total", "", Math.round(r.value), Math.round(r.fee), Math.round(r.net), r.roi == null ? "" : r.roi.toFixed(2)],
+    ...r.suiteDrivers.map((driver): (string | number)[] => [`Suite effect: ${driver.name}`, "Yes", "", Math.round(driver.value), 0, Math.round(driver.value), ""]),
+    ["Total", "", "", Math.round(r.value), Math.round(r.fee), Math.round(r.net), r.roi == null ? "" : r.roi.toFixed(2)],
     [],
-    ["Driver", "Module", "Value per month (INR)"],
-    ...r.modules.flatMap((module) => module.drivers.map((driver): (string | number)[] => [driver.name, module.module.name, Math.round(driver.value)])),
+    ["Flow", "Division", "Value"],
+    ...r.divisions.flatMap((item) => item.flow.map((step): (string | number)[] => [step.label, item.division.name, step.value])),
     [],
-    ["Assumption", "Value", "Unit", "Source", "Note"],
-    ...Object.keys(SUITE_DEFAULTS).map((id): (string | number)[] => {
-      const input = inputById(id) as SuiteInput;
-      return [`${id.split(".")[0]}: ${input.label}`, values[id], input.unit, SOURCE_LABELS[input.source], input.note];
+    ["Input", "Value", "Unit", "Source", "Note"],
+    ...Object.keys(DEFAULTS).map((id): (string | number)[] => {
+      const lever = leverById(id) as Lever;
+      return [`${id.split(".")[0]}: ${lever.label}`, values[id], lever.unit, SOURCE_LABELS[lever.source], lever.note];
     }),
   ];
   const csv = rows.map((row) => row.map(cell).join(",")).join("\r\n");
@@ -631,4 +800,3 @@ function downloadCsv(r: SuiteResult, values: SuiteValues) {
   link.click();
   URL.revokeObjectURL(url);
 }
-
