@@ -452,7 +452,7 @@ export const DIVISIONS: Division[] = [
     name: "Airline and hotel desk",
     short: "Service desk",
     href: "/airlines",
-    agents: "Schedule Watch · Refund Guard · Stay Care · Hotel Liaison",
+    agents: "Schedule Watch · Stay Care · Hotel Liaison",
     pitch: "Schedule changes and in-stay problems handled by agents, against a clock.",
     volumes: [
       vol("changes", "Airline schedule changes per month", 1200, 100, 10000, 100, "From carrier queues."),
@@ -503,7 +503,7 @@ export const DIVISIONS: Division[] = [
             name: "Debit memos avoided",
             kind: "cost",
             value: admSaved,
-            what: "Refund Guard checks the carrier's waiver before anything is reissued.",
+            what: "A waiver is confirmed before a reissue goes out.",
             steps: [S("Debit memos avoided", `${num(x("service.changes"))} × ${pct(x("service.adm"))} × ${inr(x("service.admCost"))}`, admSaved, "inr")],
           },
           {

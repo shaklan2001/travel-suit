@@ -571,13 +571,13 @@ export const PROCESSES: ProcessModule[] = [
     name: "Airlines · Reservations",
     menuLabel: "Airlines",
     group: "Book",
-    oneLiner: "Reservation support on the phone. PNR, schedule changes, and refunds wait on carrier rules and a person.",
+    oneLiner: "Reservation support on the phone. PNR and schedule changes. A reissue, refund, or split waits for a person.",
     roles: ["Reservations lead", "Contact centre"],
     queueKind: "cases",
     story: [
       { kind: "person", who: "Traveller", does: "Calls about a booking, a change, a seat, or a refund." },
       { kind: "agent", who: "Reservation Desk · PNR Reader", does: "Take the call and read the reservation from the carrier." },
-      { kind: "agent", who: "Schedule Watch · Refund Guard", does: "Spot time changes, check the refund rule, and draft the options." },
+      { kind: "agent", who: "Schedule Watch", does: "Spot a time change or cancellation on a held booking." },
       { kind: "gate", who: "Reservations lead", does: "Releases any reissue, refund, or split ticket." },
     ],
     dashboard: {
@@ -587,8 +587,7 @@ export const PROCESSES: ProcessModule[] = [
         { label: "New calls", value: 9 },
         { label: "PNR read", value: 8 },
         { label: "Schedule change", value: 5 },
-        { label: "Refund held", value: 3 },
-        { label: "Awaiting release", value: 2 },
+        { label: "Awaiting release", value: 5 },
       ],
       weekTitle: "Calls in the last 7 days",
       week: [
@@ -604,7 +603,6 @@ export const PROCESSES: ProcessModule[] = [
     kpis: [
       { id: "queue", label: "Reservation queue", value: "27", delta: "+6 today" },
       { id: "sched", label: "Schedule changes", value: "5", delta: "1 to release" },
-      { id: "refunds", label: "Refunds held", value: "3", delta: "rule missing" },
     ],
     brief: "AR-7721 moved. The voice agent can say the flight moved. The reissue waits for reservations. No fare and no waiver are stored.",
     alerts: [
@@ -631,7 +629,6 @@ export const PROCESSES: ProcessModule[] = [
       { id: "res-voice", name: "Reservation Desk", role: "Voice", kind: "conversational", autonomy: "auto_with_approval", version: "0.3.0", summary: "Handles a booking question, change, seat, special service, or refund ask.", channels: ["Voice"], skills: ["Intent", "Status readout"], inputs: "Call and PNR", outputs: "Next step" },
       { id: "pnr", name: "PNR Reader", role: "Reservation lookup", kind: "functional", autonomy: "fully_auto", version: "0.2.0", summary: "Reads what the carrier system returns. If the lookup is incomplete, the case stays in review.", channels: ["Carrier"], skills: ["PNR read"], inputs: "Record locator", outputs: "Reservation facts" },
       { id: "sched", name: "Schedule Watch", role: "Time change", kind: "functional", autonomy: "fully_auto", version: "0.2.0", summary: "Detects a time change or cancellation on a held PNR.", channels: ["Carrier"], skills: ["Schedule diff"], inputs: "PNR", outputs: "Change notice" },
-      { id: "refund", name: "Refund Guard", role: "Refund eligibility", kind: "functional", autonomy: "suggest", version: "0.1.0", summary: "Checks a configured rule. If the rule is missing, it escalates. It does not approve a guess.", channels: ["Policy config"], skills: ["Rule check"], inputs: "Fare rule config", outputs: "Eligible, or escalate" },
     ],
     phases: ["Answer", "Read", "Release"],
     steps: [
