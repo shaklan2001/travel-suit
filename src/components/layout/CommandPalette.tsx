@@ -12,9 +12,9 @@ interface PaletteItem {
 
 const ITEMS: PaletteItem[] = [
   { href: "/home", title: "Suite Home", hint: "Command Center" },
+  { href: "/roi", title: "Suite ROI", hint: "ROI calculator by division" },
   { href: "/agents", title: "Digital workers", hint: "Automation · voice and worker agents" },
   { href: "/workflows", title: "Workflows", hint: "Automation · triggers, agents, approvals" },
-  { href: "/roi", title: "Suite ROI", hint: "Automation · ROI calculator by division" },
   ...PROCESSES.flatMap((processModule) => {
     const base = `/${processModule.id}`;
     return [

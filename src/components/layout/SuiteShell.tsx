@@ -13,7 +13,6 @@ const NAV_GROUPS = ["Plan", "Book", "Care", "Audit"] as const;
 const AUTOMATION_LINKS = [
   { id: "agents", href: "/agents", label: "Digital workers" },
   { id: "workflows", href: "/workflows", label: "Workflows" },
-  { id: "roi", href: "/roi", label: "Suite ROI" },
 ] as const;
 const LOGO_SRC = "https://vibrium-artifacts.s3.ap-south-1.amazonaws.com/site-artifacts/Vibrium-Logo.png";
 const COLLAPSE_KEY = "vts.sidebar.collapsed";
@@ -76,6 +75,10 @@ function useBreadcrumbs(pathname: string) {
   const [processId, section] = pathname.split("/").filter(Boolean);
   const processModule = processId && processId !== "home" ? getProcess(processId) : null;
   const crumbs: { label: string; href?: string }[] = [{ label: "Travel Suite", href: "/home" }];
+  if (processId === "roi") {
+    crumbs.push({ label: "Suite ROI" });
+    return crumbs;
+  }
   const automationPage = AUTOMATION_LINKS.find((link) => link.id === processId);
   if (automationPage) {
     crumbs.push({ label: "Automation" }, { label: automationPage.label });
@@ -238,6 +241,10 @@ export function SuiteShell({ children }: SuiteShellProps) {
           <SuiteNavLink className="nav-link" href="/home" end label="Suite Home">
             <NavGlyph id="home" />
             <span className="fade-label">Suite Home</span>
+          </SuiteNavLink>
+          <SuiteNavLink className="nav-link" href="/roi" label="Suite ROI">
+            <NavGlyph id="roi" />
+            <span className="fade-label">Suite ROI</span>
           </SuiteNavLink>
           {NAV_GROUPS.map((group) => {
             const isOpen = isCollapsed || openGroups[group] !== false;
