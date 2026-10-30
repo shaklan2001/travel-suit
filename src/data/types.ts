@@ -1,7 +1,7 @@
 export type AgentKind = "conversational" | "functional" | "analytical";
 export type Autonomy = "fully_auto" | "auto_with_approval" | "draft" | "suggest";
 export type Severity = "critical" | "warning" | "info";
-export type QueueKind = "corporate" | "forex" | "audit" | "domestic" | "planner" | "hotels" | "cases";
+export type QueueKind = "corporate" | "forex" | "audit" | "domestic" | "planner" | "reservations";
 
 export interface Kpi {
   id: string;
@@ -111,6 +111,10 @@ export interface ProcessModule {
   dashboard?: ModuleDashboard;
   /** Label of the fourth tab, where the work happens. Defaults to "Queue". */
   workspaceLabel?: string;
+  /** The sidebar opens the workspace tab instead of the overview, and the workspace tab comes first. */
+  opensOnWorkspace?: boolean;
+  /** "funnel": the overview is the funnel dashboard, with its headline figures, in place of the generic KPIs and charts. */
+  overviewKind?: "funnel";
   /** Further workspace tabs after the fourth, each at /<module>/<slug>. */
   extraTabs?: { slug: string; label: string }[];
 }

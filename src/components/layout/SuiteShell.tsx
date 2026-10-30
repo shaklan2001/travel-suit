@@ -9,16 +9,11 @@ import { CommandPalette } from "./CommandPalette";
 import { SuiteNavLink } from "./SuiteNavLink";
 
 const NAV_GROUPS = ["Plan", "Book", "Care", "Audit"] as const;
-/** Suite-wide pages that are not a process module: the Vibrium automation layer. */
-const AUTOMATION_LINKS = [
-  { id: "agents", href: "/agents", label: "Digital workers" },
-  { id: "workflows", href: "/workflows", label: "Workflows" },
-  { id: "roi", href: "/roi", label: "Suite ROI" },
-] as const;
+/** Suite-wide pages that are not a process module, listed right under Suite Home. */
+const SUITE_LINKS = [{ id: "roi", href: "/roi", label: "Suite ROI" }] as const;
 const LOGO_SRC = "https://vibrium-artifacts.s3.ap-south-1.amazonaws.com/site-artifacts/Vibrium-Logo.png";
 const COLLAPSE_KEY = "vts.sidebar.collapsed";
 const DESKTOP_QUERY = "(min-width: 981px)";
-const SECTION_LABELS: Record<string, string> = { squad: "Agentic Squad", map: "Process Map" };
 
 function Glyph({ children, className = "nav-icon" }: { children: ReactNode; className?: string }) {
   return (
@@ -38,32 +33,17 @@ function NavGlyph({ id }: { id: string }) {
   if (id === "forex") {
     return <Glyph><circle cx="12" cy="12" r="8" /><path d="M12 8v8" /><path d="M9.5 10.2c.6-.9 4.6-1.1 4.6.8 0 1.6-4.2 1.2-4.2 2.8 0 1.2 4 .9 4.6-.2" /></Glyph>;
   }
-  if (id === "airlines") {
+  if (id === "reservations") {
     return <Glyph><path d="M2 16 22 8" /><path d="m9 13-2 7 3-2 3 4 2-1-2-5 6-3" /></Glyph>;
   }
-  if (id === "hotels") {
-    return <Glyph><path d="M4 20V6l8-3 8 3v14" /><path d="M9 20v-6h6v6" /></Glyph>;
-  }
-  if (id === "prebook") {
-    return <Glyph><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></Glyph>;
-  }
-  if (id === "during") {
+  if (id === "care") {
     return <Glyph><path d="M22 16.9v2a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 3.2 2 2 0 0 1 4.1 1h2a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L7.1 8.5a16 16 0 0 0 6 6l1.1-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" /></Glyph>;
   }
-  if (id === "post") {
-    return <Glyph><circle cx="12" cy="12" r="8" /><path d="m8.5 12.5 2.5 2.5 4.5-5" /></Glyph>;
-  }
   if (id === "planner") {
-    return <Glyph><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5 5-2z" /></Glyph>;
+    return <Glyph><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /><path d="M8.5 11h.01M12 11h.01M15.5 11h.01" /></Glyph>;
   }
   if (id === "audit") {
     return <Glyph><path d="M9 4h6v3H9z" /><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></Glyph>;
-  }
-  if (id === "agents") {
-    return <Glyph><rect x="5" y="8" width="14" height="11" rx="3" /><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16h5" /></Glyph>;
-  }
-  if (id === "workflows") {
-    return <Glyph><circle cx="6" cy="6" r="2" /><circle cx="18" cy="12" r="2" /><circle cx="6" cy="18" r="2" /><path d="M8 6h4a4 4 0 0 1 4 4M8 18h4a4 4 0 0 0 4-4" /></Glyph>;
   }
   if (id === "roi") {
     return <Glyph><path d="M4 19V5" /><path d="M4 19h16" /><path d="m7 15 4-4 3 3 5-6" /><path d="M16 8h3v3" /></Glyph>;
@@ -76,9 +56,9 @@ function useBreadcrumbs(pathname: string) {
   const [processId, section] = pathname.split("/").filter(Boolean);
   const processModule = processId && processId !== "home" ? getProcess(processId) : null;
   const crumbs: { label: string; href?: string }[] = [{ label: "Travel Suite", href: "/home" }];
-  const automationPage = AUTOMATION_LINKS.find((link) => link.id === processId);
-  if (automationPage) {
-    crumbs.push({ label: "Automation" }, { label: automationPage.label });
+  const suitePage = SUITE_LINKS.find((link) => link.id === processId);
+  if (suitePage) {
+    crumbs.push({ label: suitePage.label });
     return crumbs;
   }
 
@@ -93,7 +73,7 @@ function useBreadcrumbs(pathname: string) {
   }
   crumbs.push({ label: processModule.menuLabel, href: `/${processModule.id}` });
   const extra = processModule.extraTabs?.find((tab) => tab.slug === section);
-  crumbs.push({ label: extra?.label ?? SECTION_LABELS[section] ?? processModule.workspaceLabel ?? "Queue" });
+  crumbs.push({ label: extra?.label ?? processModule.workspaceLabel ?? "Queue" });
   return crumbs;
 }
 
@@ -108,7 +88,7 @@ export function SuiteShell({ children }: SuiteShellProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Plan: true, Book: true, Care: true, Audit: true, Automation: true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Plan: true, Book: true, Care: true, Audit: true });
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
 
   // The inline script in the root layout sets data-rail before first paint; mirror it, then enable transitions.
@@ -239,6 +219,12 @@ export function SuiteShell({ children }: SuiteShellProps) {
             <NavGlyph id="home" />
             <span className="fade-label">Suite Home</span>
           </SuiteNavLink>
+          {SUITE_LINKS.map((link) => (
+            <SuiteNavLink key={link.id} className="nav-link" href={link.href} label={link.label}>
+              <NavGlyph id={link.id} />
+              <span className="fade-label">{link.label}</span>
+            </SuiteNavLink>
+          ))}
           {NAV_GROUPS.map((group) => {
             const isOpen = isCollapsed || openGroups[group] !== false;
             const groupId = `nav-group-${group.toLowerCase()}`;
@@ -260,7 +246,13 @@ export function SuiteShell({ children }: SuiteShellProps) {
                 <div className={isOpen ? "nav-group-items open" : "nav-group-items"} id={groupId} inert={!isOpen}>
                   <div>
                     {PROCESSES.filter((processModule) => processModule.group === group).map((processModule) => (
-                      <SuiteNavLink key={processModule.id} className="nav-link" href={`/${processModule.id}`} label={processModule.menuLabel}>
+                      <SuiteNavLink
+                        key={processModule.id}
+                        className="nav-link"
+                        href={processModule.opensOnWorkspace ? `/${processModule.id}/queue` : `/${processModule.id}`}
+                        activePrefix={`/${processModule.id}`}
+                        label={processModule.menuLabel}
+                      >
                         <NavGlyph id={processModule.id} />
                         <span className="fade-label">{processModule.menuLabel}</span>
                       </SuiteNavLink>
@@ -270,35 +262,6 @@ export function SuiteShell({ children }: SuiteShellProps) {
               </div>
             );
           })}
-          <div className="nav-group">
-            <button
-              className="nav-section"
-              type="button"
-              aria-expanded={isCollapsed || openGroups.Automation !== false}
-              aria-controls="nav-group-automation"
-              tabIndex={isCollapsed ? -1 : 0}
-              onClick={() => setOpenGroups((current) => ({ ...current, Automation: current.Automation === false }))}
-            >
-              <span className="fade-label">Automation</span>
-              <svg className={isCollapsed || openGroups.Automation !== false ? "chevron open" : "chevron"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="m9 6 6 6-6 6" />
-              </svg>
-            </button>
-            <div
-              className={isCollapsed || openGroups.Automation !== false ? "nav-group-items open" : "nav-group-items"}
-              id="nav-group-automation"
-              inert={!(isCollapsed || openGroups.Automation !== false)}
-            >
-              <div>
-                {AUTOMATION_LINKS.map((link) => (
-                  <SuiteNavLink key={link.id} className="nav-link" href={link.href} label={link.label}>
-                    <NavGlyph id={link.id} />
-                    <span className="fade-label">{link.label}</span>
-                  </SuiteNavLink>
-                ))}
-              </div>
-            </div>
-          </div>
         </nav>
         <div className="account" data-label={`${OPERATOR.name} · ${OPERATOR.role}`} onMouseOver={showTip} onMouseLeave={() => setTip(null)}>
           <div className="account-avatar" aria-hidden="true">{OPERATOR.initials}</div>

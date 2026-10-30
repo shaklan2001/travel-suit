@@ -158,7 +158,7 @@ function RosterSection({ title, text, workers }: { title: string; text: string; 
                   {modules.map((processModule, index) => (
                     <span key={processModule.id}>
                       {index > 0 ? ", " : ""}
-                      <Link href={`/${processModule.id}/squad`}>{processModule.menuLabel}</Link>
+                      <Link href={`/${processModule.id}?view=squad`}>{processModule.menuLabel}</Link>
                     </span>
                   ))}
                 </td>

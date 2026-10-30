@@ -134,7 +134,7 @@ export function initialTripState(): TripState {
     step: "start",
     brief: { ...EMPTY_BRIEF },
     messages: [
-      { id: 1, from: "bot", text: "Hi! I'm your trip planner. I can suggest places, build a day-by-day plan, and give you an idea of the budget." },
+      { id: 1, from: "bot", text: "Hi! I'm your travel assistant. I can suggest places, build a day-by-day plan, and give you an idea of the budget." },
       { id: 2, from: "bot", text: "Tell me about the trip you have in mind, or pick one below." },
     ],
     chips: START_CHIPS,

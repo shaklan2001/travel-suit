@@ -1,3 +1,4 @@
+import { baggageText, cancellationText, fareRulesFor, rescheduleText } from "../lib/fleet/fare-rules";
 import type { FleetPath, FleetRun, FlightOption, JsonObject } from "../lib/fleet/types";
 import { FLEET, INTENT_LABELS, type FleetStepResult } from "./corporate-desk";
 import { extractTripFromFleet, type ApprovalRequest, type MailDecision, type MailOutcome } from "./inbox-triage";
@@ -36,7 +37,44 @@ const list = (value: unknown): string[] =>
 
 export function flightOptionsOf(run: FleetRun): FlightOption[] {
   const raw = run.options?.options;
-  return Array.isArray(raw) ? (raw as FlightOption[]) : [];
+  if (!Array.isArray(raw)) return [];
+  return (raw as (FlightOption & JsonObject)[]).map((option) => (option.fareRules ? option : { ...option, fareRules: fareRulesFor(option) }));
+}
+
+/** A sign-off is a line of its own ("Warm regards,"), not a sentence that starts with "Thank you for…". */
+const SIGN_OFF_LINE = /^\s*(?:warm regards|best regards|kind regards|regards|many thanks|thanks|thank you|sincerely|cheers)[\s,.!]*$/i;
+
+/**
+ * A quotation always tells the traveller what each fare costs to cancel or move, and what bag it carries.
+ * When the drafted mail left that out, the terms go in above the sign-off.
+ */
+function withFareTerms(body: string, run: FleetRun): string {
+  const options = flightOptionsOf(run);
+  // Only a mail that already states real allowances ("15 kg") counts. "Baggage details attached" does not.
+  if (options.length === 0 || /\d+\s*kg\b/i.test(body)) return body;
+  const terms = options
+    .map((option, index) => {
+      const rules = option.fareRules ?? fareRulesFor(option as FlightOption & JsonObject);
+      return [
+        `Option ${index + 1} · ${option.airline} ${option.flightNo} (${rules.family} fare)`,
+        `  Cancellation: ${cancellationText(rules)}`,
+        `  Reschedule: ${rescheduleText(rules)}`,
+        `  Baggage: ${baggageText(rules)}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+  const block = `Fare rules (per passenger, per sector):\n\n${terms}`;
+  const lines = body.replace(/\bin the attached (?:fare )?(?:summary|sheet|document|file)\b/gi, "below").split("\n");
+  let signOff = -1;
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (SIGN_OFF_LINE.test(lines[index])) {
+      signOff = index;
+      break;
+    }
+  }
+  if (signOff < 0) return `${body}\n\n${block}`;
+  const before = lines.slice(0, signOff).join("\n").trimEnd();
+  return `${before}\n\n${block}\n\n${lines.slice(signOff).join("\n")}`;
 }
 
 /** Below this the classifier is guessing, so a person reads the mail instead of the desk answering it. */
@@ -67,7 +105,8 @@ export function decisionFromFleet(caseCode: string, run: FleetRun): MailDecision
     path !== "suppressed" &&
     (lower(classification?.primaryIntent) === "human_intervention" ||
       (Number.isFinite(confidence) && confidence < MIN_CLASSIFIER_CONFIDENCE));
-  const replyBody = text(reply?.body);
+  const rawReplyBody = text(reply?.body);
+  const replyBody = path === "new_request" || path === "modification" ? withFareTerms(rawReplyBody, run) : rawReplyBody;
   const replySubject = text(reply?.subject) || null;
 
   const orchestratorFlagged = orchestration?.needsHumanIntervention === true || orchestration?.escalationRequired === true;
