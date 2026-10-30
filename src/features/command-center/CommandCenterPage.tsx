@@ -27,10 +27,10 @@ const ROLE_VIEWS = [
   { href: "/corporate", title: "Corporate desk", audience: "Counsellor and EA", detail: "Email fleet, policy, quotation drafts." },
   { href: "/forex", title: "Forex", audience: "DFC sales and branches", detail: "Enquiry bot, Ravi to a live quote, optional advance, branch KYC." },
   { href: "/audit", title: "Call audit", audience: "Quality", detail: "Every recorded call transcribed and scored, not a hand-picked sample." },
-  { href: "/during", title: "Domestic tours", audience: "Domestic holidays", detail: "Pre-tour, in-tour, and last-day calls. Two Ravi bots, tours read from live bookings." },
-  { href: "/planner", title: "Holiday sales", audience: "Holiday experts", detail: "Trip chats, plans with photos and budgets, and callbacks to quote." },
-  { href: "/hotels", title: "Stays", audience: "Stay desk", detail: "Hotel shortlists, holds, and in-stay problems." },
-  { href: "/workflows", title: "Automation", audience: "Ops and CXO", detail: "Every workflow: voice calls, worker agents, and where a person decides." },
+  { href: "/care", title: "Tour care", audience: "Domestic holidays", detail: "Pre-tour, in-tour, and last-day calls on one page. Two Ravi bots, tours read from live bookings." },
+  { href: "/planner/queue", title: "Holiday sales", audience: "Holiday experts", detail: "Travel assistant chats, plans with photos and budgets, and callbacks to quote." },
+  { href: "/reservations", title: "Reservations", audience: "Reservations and stay desk", detail: "Flight changes and refunds, hotel shortlists, holds, and in-stay problems." },
+  { href: "/roi", title: "Suite ROI", audience: "Ops and CXO", detail: "What the suite saves and earns, division by division." },
 ];
 
 function CardArrow() {
@@ -158,7 +158,6 @@ export function CommandCenterPage() {
         <div className="card health-card">
           <div className="section-head">
             <h2>Automation health</h2>
-            <Link className="meta" href="/workflows">See every workflow</Link>
           </div>
           <dl className="health-rows">
             <div><dt>Workflows running</dt><dd>{totals.workflowsRunning} of {totals.workflowsTotal}</dd></div>
@@ -202,7 +201,7 @@ export function CommandCenterPage() {
           Call audit: forex sales calls are scored on the 31-point form. AU-2041 is scored and sits below the bar on the opening and the card pitch.
         </p>
         <p>
-          Domestic: {domesticMorningLine()} No domestic call is due today. The Kashmir pre-departure workflow is live.
+          Tour care: {domesticMorningLine()}
         </p>
         <p>
           Airlines AR-7721 is a schedule change waiting on release. Hotel HT-2204 is a shortlist ready to send, and HT-C-3107 is a dead AC past its clock. Trip HL-2611, a Bali honeymoon, is waiting on its expert callback.

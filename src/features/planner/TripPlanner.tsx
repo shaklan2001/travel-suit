@@ -49,9 +49,9 @@ interface TripChatProps {
 /** The traveller-facing chat. The suite shows it beside the lead; the website widget shows it alone. */
 export function TripChat({
   chat,
-  title = "Trip Planner",
+  title = "Travel Assistant",
   subtitle = "Plans in minutes · an expert confirms the price",
-  avatar = "TP",
+  avatar = "TA",
   tag,
   accent,
   className = "",
@@ -75,7 +75,7 @@ export function TripChat({
     <section
       className={`ride-chat planner${accent ? " branded" : ""} ${className}`.trim()}
       style={accent ? ({ "--chat-accent": accent } as CSSProperties) : undefined}
-      aria-label="Traveller chat with the trip planner"
+      aria-label="Traveller chat with the travel assistant"
     >
       <header className="ride-chat-head">
         <span className="ride-bot-avatar" aria-hidden="true">
@@ -127,7 +127,7 @@ export function TripChat({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={busy ? "Planning…" : "e.g. Honeymoon in Bali for 6 days"}
-          aria-label="Message the trip planner"
+          aria-label="Message the travel assistant"
           disabled={busy}
           maxLength={300}
         />
@@ -279,7 +279,7 @@ function LeadFile({ state, busy, onReplay, onReset }: { state: TripState; busy: 
   ];
 
   const nodes: { kind: NodeKind; name: string; status: NodeStatus; note: string }[] = [
-    { kind: "chat", name: "Trip Planner", status: briefDone ? "done" : "working", note: briefDone ? "Brief complete" : "Talking to the traveller" },
+    { kind: "chat", name: "Travel Assistant", status: briefDone ? "done" : "working", note: briefDone ? "Brief complete" : "Talking to the traveller" },
     {
       kind: "worker",
       name: "Destination Matcher",

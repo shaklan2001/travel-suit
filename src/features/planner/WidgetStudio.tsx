@@ -45,13 +45,13 @@ export function WidgetStudio() {
   const validColor = /^#[0-9a-f]{6}$/i.test(settings.color) ? settings.color : "#2c70f6";
 
   const query = useMemo(() => {
-    const params = new URLSearchParams({ name: settings.name || "Trip Planner", color: validColor });
+    const params = new URLSearchParams({ name: settings.name || "Travel Assistant", color: validColor });
     if (settings.greeting.trim()) params.set("greeting", settings.greeting.trim());
     return params.toString();
   }, [settings.name, settings.greeting, validColor]);
 
   const attrs = [
-    `data-name="${escapeAttr(settings.name || "Trip Planner")}"`,
+    `data-name="${escapeAttr(settings.name || "Travel Assistant")}"`,
     `data-color="${validColor}"`,
     settings.label.trim() && settings.label !== "Plan my trip" ? `data-label="${escapeAttr(settings.label)}"` : null,
     settings.greeting.trim() ? `data-greeting="${escapeAttr(settings.greeting.trim())}"` : null,
@@ -75,7 +75,7 @@ export function WidgetStudio() {
     <div className="pl-stack">
       <section className="pl-intro">
         <div>
-          <h2>Your trip planner, on your website</h2>
+          <h2>Your travel assistant, on your website</h2>
           <p>
             Paste one line on your site and every visitor can plan a holiday with your brand on it. Each quote request lands on
             the quote desk as a qualified lead with the brief and the plan already written.
@@ -136,7 +136,7 @@ export function WidgetStudio() {
                   rows={2}
                   maxLength={160}
                   value={settings.greeting}
-                  placeholder="Hi! I'm your trip planner. I can suggest places, build a day-by-day plan, and give you an idea of the budget."
+                  placeholder="Hi! I'm your travel assistant. I can suggest places, build a day-by-day plan, and give you an idea of the budget."
                   onChange={(event) => update("greeting", event.target.value)}
                 />
               </label>

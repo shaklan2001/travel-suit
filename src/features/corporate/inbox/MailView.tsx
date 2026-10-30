@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { CORPORATE_POC_NOTE } from "../../../data/corporate-desk";
 import { OUTCOME_LABELS, senderName, type ApprovalRequest, type MailDecision, type TripFacts } from "../../../data/inbox-triage";
 import { flightOptionsOf } from "../../../data/live-triage";
-import type { FleetRun } from "../../../lib/fleet/types";
+import type { FareRules, FleetRun } from "../../../lib/fleet/types";
 import { Icon } from "./icons";
 import { avatarFor, fullTime, listTime, senderAddress, snippet } from "./mail-format";
 import { outcomeOf, type InboxItem, type ManagerVerdict, type SentReply } from "./useMailbox";
@@ -218,6 +218,72 @@ const LIVE_FLEET_NOTE =
 const inr = (amount: number) => `₹${Math.round(amount).toLocaleString("en-IN")}`;
 const words = (value: unknown) => (typeof value === "string" ? value.replace(/_/g, " ") : "");
 
+type TermKey = "cancel" | "reschedule" | "baggage";
+
+/** Which terms are strictly the best on offer, so the traveller can compare options at a glance. Ties mark nothing. */
+function bestTerms(all: FareRules[]): Record<TermKey, (rules: FareRules) => boolean> {
+  const unique = (values: number[]) => new Set(values).size > 1;
+  const cancelFees = all.map((rules) => (rules.refundable ? rules.cancellationFee : Infinity));
+  const changeFees = all.map((rules) => rules.rescheduleFee);
+  const bags = all.map((rules) => rules.checkInKg);
+  const lowestCancel = Math.min(...cancelFees);
+  const lowestChange = Math.min(...changeFees);
+  const mostBag = Math.max(...bags);
+  const only = (values: number[], target: number) => values.filter((value) => value === target).length === 1;
+  return {
+    cancel: (rules) => unique(cancelFees) && only(cancelFees, lowestCancel) && rules.refundable && rules.cancellationFee === lowestCancel,
+    reschedule: (rules) => unique(changeFees) && only(changeFees, lowestChange) && rules.rescheduleFee === lowestChange,
+    baggage: (rules) => unique(bags) && only(bags, mostBag) && rules.checkInKg === mostBag,
+  };
+}
+
+function FareTerms({ rules, best, label }: { rules: FareRules; best: ReturnType<typeof bestTerms>; label: string }) {
+  const tiles: { key: TermKey; icon: "eventBusy" | "update" | "luggage"; title: string; value: string; detail: string; good: boolean }[] = [
+    {
+      key: "cancel",
+      icon: "eventBusy",
+      title: "Cancellation",
+      value: !rules.refundable ? "Non-refundable" : rules.cancellationFee === 0 ? "Free" : inr(rules.cancellationFee),
+      detail: !rules.refundable ? "taxes refunded" : "fee per sector",
+      good: rules.refundable && rules.cancellationFee === 0,
+    },
+    {
+      key: "reschedule",
+      icon: "update",
+      title: "Reschedule",
+      value: rules.rescheduleFee === 0 ? "Free" : inr(rules.rescheduleFee),
+      detail: "+ fare difference",
+      good: rules.rescheduleFee === 0,
+    },
+    {
+      key: "baggage",
+      icon: "luggage",
+      title: "Baggage",
+      value: `${rules.checkInKg} kg`,
+      detail: `check-in · ${rules.cabinKg} kg cabin`,
+      good: false,
+    },
+  ];
+
+  return (
+    <ul className="gm-terms" aria-label={`Fare rules for ${label}`}>
+      {tiles.map((tile) => (
+        <li key={tile.key} className={tile.good ? "good" : undefined}>
+          <Icon name={tile.icon} />
+          <span>
+            <small>
+              {tile.title}
+              {best[tile.key](rules) ? <em>Best</em> : null}
+            </small>
+            <strong>{tile.value}</strong>
+            <span>{tile.detail}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** What the workers produced beyond the headline: quoted options, fare check, booking payload, next steps. */
 function LiveDetails({ run }: { run: FleetRun }) {
   const options = flightOptionsOf(run);
@@ -227,6 +293,7 @@ function LiveDetails({ run }: { run: FleetRun }) {
   const warnings = Array.isArray(policy?.warnings) ? (policy.warnings as string[]) : [];
   const bookingErrors = Array.isArray(booking?.validationErrors) ? (booking.validationErrors as string[]) : [];
   const payload = booking?.payload as Record<string, unknown> | undefined;
+  const best = bestTerms(options.flatMap((option) => (option.fareRules ? [option.fareRules] : [])));
 
   return (
     <div className="gm-live">
@@ -242,11 +309,13 @@ function LiveDetails({ run }: { run: FleetRun }) {
         <table className="gm-live-options" aria-label="Flight options ranked by Meera">
           <tbody>
             {options.map((option) => (
-              <tr key={option.optionId} className={option.optionId === run.options?.recommendedOptionId ? "recommended" : undefined}>
+              <Fragment key={option.optionId}>
+              <tr className={option.optionId === run.options?.recommendedOptionId ? "recommended" : undefined}>
                 <td>
                   <strong>
                     {option.airline} {option.flightNo}
                   </strong>
+                  {option.fareRules ? <span className="gm-fare-family">{option.fareRules.family} fare</span> : null}
                   <small>{option.rationale}</small>
                 </td>
                 <td>
@@ -258,6 +327,14 @@ function LiveDetails({ run }: { run: FleetRun }) {
                   {option.optionId === run.options?.recommendedOptionId ? <small>Recommended</small> : null}
                 </td>
               </tr>
+              {option.fareRules ? (
+                <tr className={option.optionId === run.options?.recommendedOptionId ? "gm-fare-terms recommended" : "gm-fare-terms"}>
+                  <td colSpan={3}>
+                    <FareTerms rules={option.fareRules} best={best} label={`${option.airline} ${option.flightNo}`} />
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>

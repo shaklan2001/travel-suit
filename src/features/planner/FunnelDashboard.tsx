@@ -23,7 +23,7 @@ export function FunnelDashboard() {
       <section className="pl-intro pl-intro-row">
         <div>
           <h2>From a chat on your site to a paid booking</h2>
-          <p>Every stage of the trip planner, the revenue it brought in, and where travellers drop off.</p>
+          <p>Every stage of the travel assistant, the revenue it brought in, and where travellers drop off.</p>
         </div>
         <div className="segmented" role="group" aria-label="Period">
           {(Object.keys(FUNNEL) as FunnelPeriod[]).map((value) => (

@@ -56,7 +56,7 @@ export const WORKFLOWS: Workflow[] = [
     runsThisWeek: 74,
     autoRate: 81,
     nodes: [
-      { kind: "trigger", label: "Quote requested in chat", detail: "Trip Planner has a brief, a plan, and a budget range" },
+      { kind: "trigger", label: "Quote requested in chat", detail: "Travel Assistant has a brief, a plan, and a budget range" },
       { kind: "worker", label: "Lead Sync", detail: "Create the lead with brief, plan, and add-ons" },
       { kind: "voice", label: "Holiday Advisor call", detail: "Within 10 minutes. Confirm the brief, book the expert slot" },
       { kind: "condition", label: "Answered?", detail: "If not, wait 30 minutes and call once more" },
@@ -179,7 +179,7 @@ export const WORKFLOWS: Workflow[] = [
   {
     id: "wf-pre-departure",
     name: "Pre-departure call",
-    processId: "prebook",
+    processId: "care",
     outcome: "Every guest is reconfirmed and prepared two days before leaving",
     status: "live",
     runsThisWeek: 19,
@@ -196,7 +196,7 @@ export const WORKFLOWS: Workflow[] = [
   {
     id: "wf-schedule-change",
     name: "Flight schedule change",
-    processId: "airlines",
+    processId: "reservations",
     outcome: "Travellers hear about a time change before they reach the airport",
     status: "live",
     runsThisWeek: 22,
@@ -212,7 +212,7 @@ export const WORKFLOWS: Workflow[] = [
   {
     id: "wf-stay-care",
     name: "In-stay problem to fix",
-    processId: "hotels",
+    processId: "reservations",
     outcome: "A guest's problem reaches the hotel inside its clock and is checked back",
     status: "live",
     runsThisWeek: 38,
@@ -230,7 +230,7 @@ export const WORKFLOWS: Workflow[] = [
   {
     id: "wf-post-trip",
     name: "Post-trip feedback and next trip",
-    processId: "post",
+    processId: "care",
     outcome: "Every guest is heard on the last day; unhappy ones get a person",
     status: "live",
     runsThisWeek: 33,

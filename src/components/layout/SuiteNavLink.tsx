@@ -10,6 +10,8 @@ interface SuiteNavLinkProps {
   end?: boolean;
   /** Shown as the collapsed-rail tooltip. */
   label?: string;
+  /** Highlight for any route under this path, when the link itself points deeper (e.g. a module that opens on its workspace). */
+  activePrefix?: string;
   children: ReactNode;
 }
 
@@ -17,9 +19,10 @@ interface SuiteNavLinkProps {
  * App-router stand-in for the previous exact and nested NavLink behavior.
  * Active links expose aria-current so the existing styles can highlight them.
  */
-export function SuiteNavLink({ href, className, end = false, label, children }: SuiteNavLinkProps) {
+export function SuiteNavLink({ href, className, end = false, label, activePrefix, children }: SuiteNavLinkProps) {
   const pathname = usePathname();
-  const isActive = end ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  const base = activePrefix ?? href;
+  const isActive = end ? pathname === href : pathname === base || pathname.startsWith(`${base}/`);
 
   return (
     <Link className={className} href={href} aria-current={isActive ? "page" : undefined} data-label={label}>

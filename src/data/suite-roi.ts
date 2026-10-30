@@ -185,7 +185,7 @@ export const DIVISIONS: Division[] = [
     id: "domestic",
     name: "Domestic holidays",
     short: "Domestic",
-    href: "/prebook",
+    href: "/care",
     agents: "Ravi · pre-tour, in-tour, and completion calls",
     pitch: "Every traveller called before, during, and after the tour, without a call centre.",
     volumes: [
@@ -251,7 +251,7 @@ export const DIVISIONS: Division[] = [
     name: "International holidays",
     short: "International",
     href: "/planner",
-    agents: "Trip Planner · Quote Builder · Trip Document Designer",
+    agents: "Travel Assistant · Quote Builder · Trip Document Designer",
     pitch: "A planner on your website that turns visitors into priced, designed holiday quotes.",
     volumes: [
       vol("visitors", "Website visitors per month", 88600, 5000, 500000, 5000, "From your web analytics."),

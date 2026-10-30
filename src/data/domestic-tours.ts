@@ -1,6 +1,6 @@
 /**
- * Domestic outbound calls. Thresholds match the 8 Oct 2026 project context.
- * Demo package facts are the ones hardcoded in the prompts. There is no Raahi feed.
+ * Tour care outbound calls. Thresholds match the 8 Oct 2026 project context.
+ * The departures are a generic mixed book: group and private, short and long, India and abroad.
  */
 
 export const PRE_TOUR_DAYS_BEFORE_DEPARTURE = 2;
@@ -15,13 +15,13 @@ export const WORKFLOW_DELAY_SECONDS = 60;
 export const SUGGESTED_RETRY_DELAY_MINUTES = 30;
 const MILLISECONDS_PER_DAY = 86_400_000;
 
-export const KASHMIR_GROUP_BOT_ID = "VB00000355";
-export const KERALA_CUSTOMISED_BOT_ID = "VB00000215";
+export const GROUP_TOUR_BOT_ID = "VB00000355";
+export const PRIVATE_TOUR_BOT_ID = "VB00000215";
 
 export const SUITE_AS_OF = { year: 2026, month: 10, day: 8 } as const;
 
 export type CalendarDay = { year: number; month: number; day: number };
-export type TourStyle = "group" | "customised";
+export type TourStyle = "group" | "private";
 export type DomesticCallStage = "pre_tour" | "in_tour" | "completion";
 
 export interface DemoPackage {
@@ -58,42 +58,97 @@ export const DEMO_CANCELLATION_SLABS = [
 
 export const DEMO_PACKAGES: DemoPackage[] = [
   {
-    code: "PKG011485",
-    name: "Exotic Kashmir With Gulmarg Stay",
+    code: "PKG012040",
+    name: "Hill stations escape",
     tourStyle: "group",
-    botId: KASHMIR_GROUP_BOT_ID,
+    botId: GROUP_TOUR_BOT_ID,
     nights: 6,
     days: 7,
-    startsOn: { year: 2026, month: 10, day: 7 },
-    endsOn: { year: 2026, month: 10, day: 13 },
-    route: "Srinagar houseboat 1 night, Pahalgam 2, Gulmarg 1, Srinagar 2",
-    meals: "6 breakfasts, 5 lunches, 6 dinners",
-    included: "Round-trip flights and insurance. GST extra. Gondola is not guaranteed; Buta Pathri is the alternative.",
+    startsOn: { year: 2026, month: 10, day: 10 },
+    endsOn: { year: 2026, month: 10, day: 16 },
+    route: "Hill town 3 nights, valley 2, city 1",
+    meals: "Breakfast and dinner",
+    included: "Flights, coach transfers, tour manager",
     demoOnlyNote: null,
   },
   {
-    code: "PKG009251",
-    name: "Colours of Kerala",
-    tourStyle: "customised",
-    botId: KERALA_CUSTOMISED_BOT_ID,
-    nights: 8,
-    days: 9,
+    code: "PKG012112",
+    name: "Heritage cities short break",
+    tourStyle: "private",
+    botId: PRIVATE_TOUR_BOT_ID,
+    nights: 2,
+    days: 3,
     startsOn: { year: 2026, month: 10, day: 7 },
-    endsOn: { year: 2026, month: 10, day: 15 },
-    route: "Kochi 1 night, Munnar 2, Thekkady 1, Alleppey 1, Kumarakom 1, Kovalam 2",
+    endsOn: { year: 2026, month: 10, day: 9 },
+    route: "Two heritage cities, 1 night each",
     meals: "Breakfast only",
-    included: "Private AC sedan. Entry fees are extra.",
+    included: "Private car and driver, entry fees extra",
+    demoOnlyNote: null,
+  },
+  {
+    code: "PKG011977",
+    name: "Backwaters and beaches",
+    tourStyle: "private",
+    botId: PRIVATE_TOUR_BOT_ID,
+    nights: 7,
+    days: 8,
+    startsOn: { year: 2026, month: 10, day: 2 },
+    endsOn: { year: 2026, month: 10, day: 9 },
+    route: "Port city 1 night, hills 2, houseboat 1, beach 3",
+    meals: "Breakfast only",
+    included: "Private car and driver",
+    demoOnlyNote: null,
+  },
+  {
+    code: "PKG011903",
+    name: "Island getaway",
+    tourStyle: "group",
+    botId: GROUP_TOUR_BOT_ID,
+    nights: 5,
+    days: 6,
+    startsOn: { year: 2026, month: 10, day: 3 },
+    endsOn: { year: 2026, month: 10, day: 8 },
+    route: "Island resort 3 nights, second island 2",
+    meals: "All meals",
+    included: "Flights, ferries, tour manager",
+    demoOnlyNote: null,
+  },
+  {
+    code: "PKG012205",
+    name: "Desert and forts",
+    tourStyle: "group",
+    botId: GROUP_TOUR_BOT_ID,
+    nights: 5,
+    days: 6,
+    startsOn: { year: 2026, month: 10, day: 6 },
+    endsOn: { year: 2026, month: 10, day: 11 },
+    route: "Fort city 2 nights, desert camp 1, lake city 2",
+    meals: "Breakfast and dinner",
+    included: "Flights, coach transfers, tour manager",
+    demoOnlyNote: null,
+  },
+  {
+    code: "PKG012150",
+    name: "City break abroad",
+    tourStyle: "private",
+    botId: PRIVATE_TOUR_BOT_ID,
+    nights: 4,
+    days: 5,
+    startsOn: { year: 2026, month: 10, day: 12 },
+    endsOn: { year: 2026, month: 10, day: 16 },
+    route: "One city, 4 nights",
+    meals: "Breakfast only",
+    included: "Flights, visa, airport transfers, city pass",
     demoOnlyNote: null,
   },
 ];
 
 export const WORKFLOW_OPEN_ITEMS = [
-  "Segment: Kashmir group departures.",
-  "Both voice nodes run on the pre-tour campaign.",
-  `Retry delay is ${WORKFLOW_DELAY_SECONDS} seconds.`,
-  "WhatsApp details follow a connected call.",
-  "The workflow is saved and active.",
-  "The Kerala workflow follows the same pattern.",
+  "Audience: every departure in the next 7 days, group and private.",
+  `Pre-tour call ${PRE_TOUR_DAYS_BEFORE_DEPARTURE} days before departure.`,
+  `No answer: one retry after ${SUGGESTED_RETRY_DELAY_MINUTES} minutes.`,
+  "WhatsApp tour details go only after a connected call.",
+  "In-tour and last-day calls follow the same workflow.",
 ] as const;
 
 export const STAGE_PURPOSE: Record<DomesticCallStage, string> = {
@@ -142,7 +197,7 @@ export function planCalls(pkg: DemoPackage, asOf: CalendarDay = SUITE_AS_OF): Pa
 export function packageByCode(code: string): DemoPackage {
   const found = DEMO_PACKAGES.find((pkg) => pkg.code === code);
   if (!found) {
-    throw new Error(`Demo package ${code} is not in the domestic book.`);
+    throw new Error(`Package ${code} is not in the tour book.`);
   }
   return found;
 }
@@ -152,11 +207,8 @@ export function countDueOn(stage: DomesticCallStage, asOf: CalendarDay = SUITE_A
 }
 
 export function domesticMorningLine(asOf: CalendarDay = SUITE_AS_OF): string {
-  return DEMO_PACKAGES.map((pkg) => {
-    const plan = planCalls(pkg, asOf);
-    const lengthLabel = plan.isLongTour ? "long tour" : "short tour";
-    return `${pkg.code} is day ${plan.dayNumber} of a ${lengthLabel}. In-tour call ${formatCalendarDay(plan.inTourOn)}. Completion ${formatCalendarDay(plan.completionOn)}.`;
-  }).join(" ");
+  const due = countDueOn("pre_tour", asOf) + countDueOn("in_tour", asOf) + countDueOn("completion", asOf);
+  return `${due} care calls today across ${DEMO_PACKAGES.length} departures: ${countDueOn("pre_tour", asOf)} pre-tour, ${countDueOn("in_tour", asOf)} in-tour, ${countDueOn("completion", asOf)} on the last day. The care workflow is live.`;
 }
 
 function stageDueOn(

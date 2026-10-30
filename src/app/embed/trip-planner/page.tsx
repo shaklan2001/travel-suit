@@ -12,7 +12,7 @@ export default async function EmbedTripPlannerRoute({ searchParams }: EmbedRoute
   const color = first(params.color);
   return (
     <EmbedChat
-      name={first(params.name).slice(0, 40) || "Trip Planner"}
+      name={first(params.name).slice(0, 40) || "Travel Assistant"}
       color={/^#[0-9a-f]{6}$/i.test(color) ? color : "#2c70f6"}
       greeting={first(params.greeting).slice(0, 160)}
     />
