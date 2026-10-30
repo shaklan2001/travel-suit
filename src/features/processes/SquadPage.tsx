@@ -1,10 +1,4 @@
-import { MissingProcess, ProcessFrame } from "../../components/layout/ProcessFrame";
-import { getProcess } from "../../data/book";
-import { AUTONOMY_LABELS, type AgentCard, type AgentKind, type Autonomy } from "../../data/types";
-
-interface SquadPageProps {
-  processId: string;
-}
+import { AUTONOMY_LABELS, type AgentCard, type AgentKind, type Autonomy, type ProcessModule } from "../../data/types";
 
 const GROUPS: { kind: AgentKind; title: string; text: string }[] = [
   { kind: "conversational", title: "Talk to people", text: "Voice, chat, or email. They start the case and keep the person informed." },
@@ -21,18 +15,13 @@ const AUTONOMY_HINTS: Record<Autonomy, string> = {
 
 const AUTONOMY_ORDER: Autonomy[] = ["fully_auto", "auto_with_approval", "draft", "suggest"];
 
-export function SquadPage({ processId }: SquadPageProps) {
-  const processModule = getProcess(processId);
-
-  if (!processModule) {
-    return <MissingProcess />;
-  }
-
+/** Who runs the process. Read-only reference, shown in the process header's Squad modal. */
+export function SquadPanel({ processModule }: { processModule: ProcessModule }) {
   const agents = processModule.agents;
   const usedLevels = AUTONOMY_ORDER.filter((level) => agents.some((agent) => agent.autonomy === level));
 
   return (
-    <ProcessFrame processModule={processModule}>
+    <>
       <section className="squad-intro card">
         <div>
           <h2>
@@ -72,7 +61,7 @@ export function SquadPage({ processId }: SquadPageProps) {
           </section>
         );
       })}
-    </ProcessFrame>
+    </>
   );
 }
 

@@ -51,4 +51,18 @@ export interface FlightOption {
   fare: number;
   currency?: string;
   rationale?: string;
+  fareFamily?: string;
+  fareType?: string;
+  fareRules?: FareRules;
+}
+
+/** What the traveller gives up or keeps on a fare. Fees are per passenger, per sector. */
+export interface FareRules {
+  family: string;
+  refundable: boolean;
+  cancellationFee: number;
+  /** Charged on top of any fare difference. Zero means the date change itself is free. */
+  rescheduleFee: number;
+  checkInKg: number;
+  cabinKg: number;
 }

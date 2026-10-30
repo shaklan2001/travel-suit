@@ -12,15 +12,13 @@ interface PaletteItem {
 
 const ITEMS: PaletteItem[] = [
   { href: "/home", title: "Suite Home", hint: "Command Center" },
-  { href: "/agents", title: "Digital workers", hint: "Automation · voice and worker agents" },
-  { href: "/workflows", title: "Workflows", hint: "Automation · triggers, agents, approvals" },
-  { href: "/roi", title: "Suite ROI", hint: "Automation · ROI calculator by division" },
+  { href: "/roi", title: "Suite ROI", hint: "ROI calculator by division" },
   ...PROCESSES.flatMap((processModule) => {
     const base = `/${processModule.id}`;
     return [
       { href: base, title: processModule.name, hint: `${processModule.group} · Overview` },
-      { href: `${base}/squad`, title: `${processModule.menuLabel} — Agentic Squad`, hint: processModule.group },
-      { href: `${base}/map`, title: `${processModule.menuLabel} — Process Map`, hint: processModule.group },
+      { href: `${base}?view=squad`, title: `${processModule.menuLabel} — Agentic Squad`, hint: processModule.group },
+      { href: `${base}?view=map`, title: `${processModule.menuLabel} — Process Map`, hint: processModule.group },
       { href: `${base}/queue`, title: `${processModule.menuLabel} — ${processModule.workspaceLabel ?? "Queue"}`, hint: processModule.group },
       ...(processModule.extraTabs ?? []).map((tab) => ({ href: `${base}/${tab.slug}`, title: `${processModule.menuLabel} — ${tab.label}`, hint: processModule.group })),
     ];

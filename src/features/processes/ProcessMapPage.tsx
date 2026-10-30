@@ -1,28 +1,18 @@
-import { MissingProcess, ProcessFrame } from "../../components/layout/ProcessFrame";
-import { getProcess } from "../../data/book";
+import { StoryStrip } from "../../components/ui/StoryStrip";
 import type { MapStep, ProcessModule } from "../../data/types";
-
-interface ProcessMapPageProps {
-  processId: string;
-}
 
 interface Lane {
   name: string;
   isAgent: boolean;
 }
 
-export function ProcessMapPage({ processId }: ProcessMapPageProps) {
-  const processModule = getProcess(processId);
-
-  if (!processModule) {
-    return <MissingProcess />;
-  }
-
+/** Who does what, in order. Read-only reference, shown in the process header's Map modal. */
+export function ProcessMapPanel({ processModule }: { processModule: ProcessModule }) {
   const lanes = lanesOf(processModule);
   const stepCode = (step: MapStep) => step.id.toUpperCase();
 
   return (
-    <ProcessFrame processModule={processModule}>
+    <>
       <section className="card map-intro">
         <div>
           <h2>Who does what, in order</h2>
@@ -38,6 +28,14 @@ export function ProcessMapPage({ processId }: ProcessMapPageProps) {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* The process in plain steps, kept here with the map rather than on the working overview. */}
+      <section className="section">
+        <StoryStrip steps={processModule.story} title={processModule.storyTitle} />
+        {processModule.moreStories?.map((story) => (
+          <StoryStrip key={story.title} steps={story.steps} title={story.title} />
+        ))}
       </section>
 
       <section className="section">
@@ -77,7 +75,7 @@ export function ProcessMapPage({ processId }: ProcessMapPageProps) {
           })}
         </ol>
       </section>
-    </ProcessFrame>
+    </>
   );
 }
 

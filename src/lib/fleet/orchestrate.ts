@@ -1,4 +1,5 @@
 import { AGENT_SLOTS, getAgentId, type AgentSlot } from "../vibrium/config";
+import { withFareRules } from "./fare-rules";
 import { mockTravelOneRevalidate, mockTravelOneSearch } from "./travelone-mock";
 import type { FleetPath, FleetRun, FleetStep, JsonObject } from "./types";
 import { runWorker } from "./worker";
@@ -177,11 +178,14 @@ export async function runDeskFleet(emailText: string, priorCaseJson = ""): Promi
 
   const travelOne: NonNullable<FleetRun["travelOne"]> = { search: mockTravelOneSearch(extraction) };
 
-  const options = await run.exec("flight_options", {
-    extracted_request_json: json(extraction),
-    policy_json: json(policy),
-    search_api_json: json(travelOne.search),
-  });
+  // Every option carries its cancellation, date-change and baggage terms into the quote, revalidation and payload.
+  const options = withFareRules(
+    await run.exec("flight_options", {
+      extracted_request_json: json(extraction),
+      policy_json: json(policy),
+      search_api_json: json(travelOne.search),
+    }),
+  );
 
   let revalidation: JsonObject | undefined;
   let booking: JsonObject | undefined;

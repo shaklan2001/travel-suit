@@ -2,8 +2,8 @@ import { MissingProcess, ProcessFrame } from "../../components/layout/ProcessFra
 import { CaseTable } from "../../components/ui/CaseTable";
 import { StageBars, WeekColumns } from "../../components/ui/Charts";
 import { AlertList, KpiGrid, TodoList } from "../../components/ui/FactLists";
-import { StoryStrip } from "../../components/ui/StoryStrip";
 import { getProcess } from "../../data/book";
+import { FunnelDashboard } from "../planner/FunnelDashboard";
 import { BOOK_AS_OF_LABEL } from "../../lib/suite-config";
 
 interface ProcessOverviewProps {
@@ -21,6 +21,8 @@ export function ProcessOverview({ processId }: ProcessOverviewProps) {
   const alerts = processModule.alerts.map((alert) => ({ href: workspaceHref, alert }));
   const todos = processModule.todos.map((todo, index) => ({ href: workspaceHref, todo, rank: index + 1 }));
   const dashboard = processModule.dashboard;
+  // A funnel overview already carries the headline figures and stage chart, so the generic ones would repeat it.
+  const isFunnel = processModule.overviewKind === "funnel";
   const narrators = processModule.agents
     .filter((agent) => agent.kind !== "conversational")
     .slice(0, 2)
@@ -28,12 +30,7 @@ export function ProcessOverview({ processId }: ProcessOverviewProps) {
 
   return (
     <ProcessFrame processModule={processModule}>
-      <StoryStrip steps={processModule.story} title={processModule.storyTitle} />
-      {processModule.moreStories?.map((story) => (
-        <StoryStrip key={story.title} steps={story.steps} title={story.title} />
-      ))}
-
-      <KpiGrid kpis={processModule.kpis} />
+      {isFunnel ? <FunnelDashboard /> : <KpiGrid kpis={processModule.kpis} />}
 
       <section className="card brief">
         <div className="brief-head">
@@ -46,7 +43,7 @@ export function ProcessOverview({ processId }: ProcessOverviewProps) {
         <p>{processModule.brief}</p>
       </section>
 
-      {dashboard ? (
+      {dashboard && !isFunnel ? (
         <section className="section chart-grid" aria-label="Charts">
           <StageBars title={dashboard.stageTitle} unit={dashboard.stageUnit} stages={dashboard.stages} />
           <WeekColumns title={dashboard.weekTitle} week={dashboard.week} />

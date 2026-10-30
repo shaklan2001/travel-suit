@@ -17,7 +17,7 @@ function initials(name: string): string {
     .filter(Boolean)
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() ?? "");
-  return letters.join("") || "TP";
+  return letters.join("") || "TA";
 }
 
 /** The widget's chat. When the traveller asks for a quote, the host page hears about the new lead. */
