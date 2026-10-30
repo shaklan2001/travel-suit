@@ -11,7 +11,6 @@ Workers:
 - PNR Reader — pulls the reservation the carrier system returns. If the lookup is pending, the case stays in review
 - Schedule Watch — detects a time change or cancellation on a held PNR
 - Change Drafter — writes the change for a human to release
-- Refund Guard — checks the configured rule. If the rule is missing, it escalates. It does not approve a refund from guesswork
 - Service Clerk — meals, wheelchair, seat, frequent-flyer note
 
 ## Golden path
